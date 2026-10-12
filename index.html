@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0F141F">
+<title>Between Stops Kiosk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<style>
+:root{
+  --ink:#182033; --ink2:#0F141F; --yellow:#FFC72C; --yellow-deep:#E0A800; --blue:#2D5BA8; --grey:#E9ECF1;
+  --bg:#F4F6F9; --white:#fff; --muted:#5E6779; --line:#D7DCE4; --green:#2E7D5B; --mint:#3DDC97;
+  --red:#C2402A; --cream:#FFF7DD; --held:#FFF1C7; --t1:#F28C1E; --salmon:#FFB4A6;
+  --sans:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Newsreader", Georgia, "Times New Roman", serif;
+}
+html{font-size:16px}
+html.big{font-size:18.9px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--ink2);overscroll-behavior:none}
+body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+button,input,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+svg{display:block}
+
+/* ---------- Stage: a fixed 1280x860 kiosk screen scaled to fit any window ---------- */
+#stage{position:fixed;left:50%;top:50%;width:1280px;height:860px;transform-origin:center;overflow:hidden;background:var(--bg);border-radius:0}
+#app{position:absolute;inset:0}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.screen.enter{animation:screenIn .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes screenIn{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:none}}
+.dark{background:linear-gradient(180deg,var(--ink),var(--ink2));color:#fff}
+
+/* ---------- Shared bits ---------- */
+.top{display:flex;align-items:center;gap:22px;padding:20px 28px 0}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:52px;height:52px;border-radius:15px;background:var(--ink);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.14);cursor:pointer;flex-shrink:0}
+.brand-t{font-family:var(--serif);font-weight:600;font-size:1.65rem;line-height:1}
+.brand-s{font-size:.95rem;font-weight:700;color:var(--muted);margin-top:3px}
+.pill-btn{display:flex;align-items:center;gap:8px;height:56px;padding:0 18px;border-radius:999px;background:#fff;color:var(--blue);font-weight:700;font-size:1.25rem}
+.journey{flex:1;display:flex;align-items:center;gap:14px;padding:8px 16px;border-radius:22px;background:#fff;min-width:0}
+.t1{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:var(--t1);color:var(--ink);font-weight:700;font-size:1.1rem;flex-shrink:0}
+.round{width:56px;height:56px;border-radius:50%;background:#fff;font-weight:700;font-size:1.35rem;flex-shrink:0}
+.round.on{background:var(--ink);color:#fff}
+.clock{font-weight:700;font-size:1.6rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.jb{flex:1;display:flex;align-items:center;gap:18px;min-width:0}
+.jb-l{min-width:170px}
+.jb-label{display:block;font-size:.85rem;font-weight:700;color:var(--muted)}
+.jb-name{display:block;font-size:1.5rem;font-weight:700;white-space:nowrap}
+.jb.dark .jb-label{color:rgba(255,255,255,.6)}
+.jb.dark .jb-name{color:#fff}
+.jb-track{position:relative;flex:1;height:40px}
+.jb-track::before{content:"";position:absolute;left:0;right:0;top:17px;height:6px;border-radius:3px;background:var(--line)}
+.jb.dark .jb-track::before{background:rgba(255,255,255,.15)}
+.jb-fill{position:absolute;left:0;top:17px;height:6px;border-radius:3px;background:var(--yellow);width:0}
+.jb-track::after{content:"";position:absolute;right:0;top:13px;width:14px;height:14px;border-radius:50%;border:4px solid var(--yellow);background:#fff;box-sizing:border-box}
+.jb.dark .jb-track::after{background:var(--ink)}
+.jb-train{position:absolute;top:3px;left:0;width:34px;height:34px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;box-shadow:0 0 10px rgba(224,168,0,.6);transition:left .25s linear}
+.jb-min{width:64px;text-align:right;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.jb.dark .jb-min{color:rgba(255,255,255,.7)}
+.jb-name.swap{animation:pushUp .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes pushUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:72px;border-radius:22px;font-weight:700;font-size:1.4rem;transition:transform .2s cubic-bezier(.3,1.6,.5,1),box-shadow .2s,opacity .2s;white-space:nowrap}
+.btn:active,.press:active{transform:scale(.96)}
+.btn.y{background:var(--yellow);color:var(--ink);box-shadow:0 8px 18px rgba(224,168,0,.35)}
+.btn.ink{background:var(--ink);color:#fff}
+.btn.w{background:#fff;color:var(--ink)}
+.btn.ghost{border:2px solid var(--line);color:var(--ink)}
+.btn.ghost-d{border:2px solid rgba(255,255,255,.25);color:#fff}
+.btn.red{background:var(--red);color:#fff}
+.btn.sm{height:60px;font-size:1.2rem}
+.btn[disabled]{opacity:.45;box-shadow:none;pointer-events:none}
+.press{transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+
+.title{font-size:2.5rem;font-weight:700;line-height:1.1}
+.sub{font-size:1.2rem;color:var(--muted);margin-top:6px;line-height:1.4}
+.serif{font-family:var(--serif);font-weight:600}
+
+/* Book covers (same art as the phone app) */
+.cover{position:relative;flex-shrink:0;border-radius:4px 9px 9px 4px;overflow:hidden;background:var(--c1);color:var(--c2);box-shadow:inset 4px 0 0 rgba(0,0,0,.18),0 8px 18px rgba(24,32,51,.25)}
+.cover svg{position:absolute;inset:0;width:100%;height:100%}
+.cover .ct{position:absolute;left:10%;right:10%;bottom:21%;font-family:var(--serif);font-weight:600;line-height:1.05}
+.cover .ca{position:absolute;left:10%;right:10%;bottom:9%;font-size:.55em;opacity:.85}
+
+/* Stars */
+.stars{display:inline-flex;gap:2px;color:var(--yellow-deep);vertical-align:middle}
+.dark .stars,.stars.light{color:var(--yellow)}
+
+/* Countdown ring */
+.ring{position:relative;flex-shrink:0;display:grid;place-items:center}
+.ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:7}
+.ring .tr{stroke:var(--line)}
+.ring.dk .tr{stroke:rgba(255,255,255,.15)}
+.ring .fl{stroke:var(--ink);stroke-linecap:round;stroke-dasharray:var(--c);stroke-dashoffset:0;animation:ringDown var(--d) linear forwards}
+.ring.dk .fl{stroke:#fff}
+.ring b{font-variant-numeric:tabular-nums;font-size:1.4rem}
+.ring.dk b{color:#fff}
+@keyframes ringDown{to{stroke-dashoffset:var(--c)}}
+
+/* ---------- Attract ---------- */
+.attract{background:linear-gradient(180deg,var(--ink),var(--ink2));color:#fff;cursor:pointer}
+.attract .fade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,20,31,.96),rgba(15,20,31,.6) 50%,transparent)}
+.floaters{position:absolute;inset:0;overflow:hidden}
+.floater{position:absolute;bottom:-300px;animation:rise linear infinite}
+@keyframes rise{from{transform:translateY(0) rotate(var(--r))}50%{transform:translateY(-640px) rotate(calc(var(--r) * -1)) translateX(20px)}to{transform:translateY(-1280px) rotate(var(--r))}}
+.att-in{position:absolute;inset:44px 64px 0;display:flex;flex-direction:column}
+.att-top{display:flex;justify-content:space-between;align-items:center}
+.att-top .journey{flex:none;width:560px;background:rgba(255,255,255,.07)}
+.att-title{font-family:var(--serif);font-weight:600;font-size:6.5rem;line-height:1;margin-top:auto;animation:upIn .9s cubic-bezier(.2,.8,.2,1) both}
+.att-sub{font-size:1.9rem;color:rgba(255,255,255,.7);margin-top:8px;animation:upIn .9s .1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes upIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+.fact{display:flex;gap:12px;align-items:center;font-size:1.4rem;font-weight:700;color:rgba(255,255,255,.85);margin-top:34px;height:34px;overflow:hidden}
+.fact span{animation:pushUp .6s cubic-bezier(.2,.8,.2,1)}
+.att-cta{display:flex;align-items:center;gap:22px;margin-top:34px;margin-bottom:190px}
+.touch{display:flex;align-items:center;gap:14px;height:84px;padding:0 34px;border-radius:999px;background:var(--yellow);color:var(--ink);font-size:1.75rem;font-weight:700;animation:breathe 2.8s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 10px rgba(255,199,44,.2);transform:scale(1)}50%{box-shadow:0 0 34px rgba(255,199,44,.6);transform:scale(1.04)}}
+.att-cta p{font-size:1.2rem;color:rgba(255,255,255,.65);line-height:1.4}
+.track{position:absolute;left:0;right:0;bottom:34px;height:90px}
+.track::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:3px;background:rgba(255,255,255,.12)}
+.train{position:absolute;bottom:0;display:flex;gap:6px;animation:roll 15s linear infinite}
+@keyframes roll{from{transform:translateX(-1000px)}to{transform:translateX(1320px)}}
+.car{position:relative;width:112px;height:52px;border-radius:10px;background:rgba(255,255,255,.14);display:flex;justify-content:center;gap:8px;padding-top:11px;animation:bob .45s ease-in-out infinite alternate}
+.car:nth-child(odd){animation-delay:-.2s}
+.car i{width:22px;height:14px;border-radius:3px;background:rgba(255,255,255,.22)}
+.car.lib{background:var(--yellow)}
+.car.lib i{background:rgba(24,32,51,.3)}
+.car.lib::before{content:"";position:absolute;top:-24px;left:44px;width:24px;height:18px;background:linear-gradient(90deg,#fff 0 5px,transparent 5px 9px,#fff 9px 14px,transparent 14px 18px,#fff 18px 23px);clip-path:polygon(0 12%,22% 12%,22% 30%,39% 30%,39% 0,60% 0,60% 100%,0 100%);}
+.car.head{border-top-right-radius:28px}
+.car.tail{border-top-left-radius:28px}
+@keyframes bob{to{transform:translateY(-1.5px)}}
+
+/* ---------- Home ---------- */
+.home-body{flex:1;display:flex;gap:24px;padding:22px 28px 28px;min-height:0}
+.collect{flex:1;display:flex;flex-direction:column;gap:18px;padding:26px;border-radius:34px;background:var(--ink);color:#fff;min-width:0;animation:slideL .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes slideL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+.collect h2{font-size:2.5rem}
+.collect .sub{color:rgba(255,255,255,.7);margin-top:4px}
+.side{width:420px;display:flex;flex-direction:column;gap:16px}
+.tile{display:flex;align-items:center;gap:18px;padding:20px;min-height:116px;border-radius:28px;background:#fff;text-align:left;width:100%;animation:slideR .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes slideR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.tile .ic{width:76px;height:76px;border-radius:22px;display:grid;place-items:center;flex-shrink:0}
+.tile b{display:block;font-size:1.5rem}
+.tile span{display:block;font-size:1rem;color:var(--muted);margin-top:4px}
+.tile .chev{margin-left:auto;color:var(--line)}
+.fan{position:relative;width:76px;height:76px;flex-shrink:0}
+.fan .cover{position:absolute;left:15px;top:4px;transform-origin:bottom center}
+.stats{display:flex;gap:12px;margin-top:auto;animation:slideR .55s .26s cubic-bezier(.2,.8,.2,1) both}
+.stat{flex:1;padding:18px;border-radius:24px;background:#fff}
+.stat b{display:block;font-size:2.1rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.95rem;opacity:.7}
+.stat.blue{background:var(--blue);color:#fff}
+
+/* Viewfinder */
+.vf{position:relative;flex:1;min-height:0;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#2B3550,#10151F 75%)}
+.vf video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:0;transition:opacity .4s}
+.vf.live video{opacity:.92}
+.vf.live .phone{display:none}
+.vf .frame{position:absolute;left:50%;top:50%;width:var(--s);height:var(--s);transform:translate(-50%,-50%);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(.97)}50%{transform:translate(-50%,-50%) scale(1.03)}}
+.vf .frame b{position:absolute;width:20%;height:20%;border:7px solid var(--yellow)}
+.vf .frame b:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;border-radius:16px 0 0 0}
+.vf .frame b:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;border-radius:0 16px 0 0}
+.vf .frame b:nth-child(3){bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 16px}
+.vf .frame b:nth-child(4){bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 16px 0}
+.vf .sweep{position:absolute;left:5%;right:5%;height:3px;border-radius:2px;background:var(--yellow);box-shadow:0 0 12px var(--yellow);animation:sweep 4s ease-in-out infinite}
+@keyframes sweep{0%,100%{top:8%}50%{top:88%}}
+.vf .hint{position:absolute;top:16px;left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:rgba(0,0,0,.45);font-size:1.05rem;font-weight:700;color:rgba(255,255,255,.88);white-space:nowrap;z-index:2}
+.vf .flash{position:absolute;inset:0;background:var(--yellow);opacity:0;pointer-events:none}
+.vf .flash.go{animation:flash .5s}
+@keyframes flash{0%{opacity:.5}100%{opacity:0}}
+.phone{position:absolute;left:50%;top:50%;width:150px;height:290px;margin:-145px 0 0 -75px;border-radius:26px;background:#fff;border:6px solid #1B1D22;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--ink);animation:hold 4.4s ease-in-out infinite}
+.phone small{font-size:.8rem;font-weight:700}
+.phone .qr{width:104px;height:104px}
+.phone b{font-variant-numeric:tabular-nums}
+.phone.book{width:150px;height:210px;margin:-105px 0 0 -75px;border:0;border-radius:6px 10px 10px 6px;background:#5B8DB8}
+.phone.book .bc{background:#fff;padding:8px;border-radius:4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.55rem;font-family:monospace}
+.phone.book .bars{width:84px;height:40px;background:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 4px,#000 4px 5px,transparent 5px 8px)}
+@keyframes hold{0%,100%{transform:translateY(260px) scale(.6) rotate(-8deg);opacity:.6}50%{transform:translateY(0) scale(.82) rotate(0);opacity:1}}
+.demo{display:flex;flex-direction:column;gap:10px}
+.demo-h{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;font-weight:700;color:rgba(255,255,255,.7)}
+.demo-h button{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:.95rem}
+.chips-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none}
+.chips-row::-webkit-scrollbar{display:none}
+.dchip{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.1);color:#fff;text-align:left;flex-shrink:0}
+.dchip b{display:block;font-size:1rem}
+.dchip span{display:block;font-size:.8rem;opacity:.7}
+
+/* ---------- Locker wall ---------- */
+.wall{display:grid;grid-template-columns:repeat(4,var(--w));gap:12px;padding:18px;border-radius:30px;background:linear-gradient(180deg,#2A3349,#1A2133);box-shadow:0 18px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.08);perspective:1400px;flex-shrink:0}
+.door{position:relative;width:var(--w);height:calc(var(--w) * 1.32);transform-style:preserve-3d}
+.cav{position:absolute;inset:0;border-radius:14px;background:#0B0F18;display:grid;place-items:center;box-shadow:inset 0 -6px 0 rgba(255,255,255,.06);transition:box-shadow .4s}
+.door.open .cav{box-shadow:inset 0 0 50px rgba(255,199,44,.4)}
+.cav .cover{transition:opacity .3s,transform .4s}
+.door.empty-out .cav .cover{opacity:0;transform:translateX(40px) scale(.6)}
+.glass{position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.05) 50%,rgba(255,255,255,.12));border:2px solid rgba(255,255,255,.25);transform-origin:left center;transition:transform .9s cubic-bezier(.3,1.35,.5,1),box-shadow .9s;overflow:hidden;backface-visibility:visible}
+.glass::before{content:"";position:absolute;left:12%;top:-20%;width:12%;height:140%;background:rgba(255,255,255,.12);transform:rotate(24deg)}
+.door.open .glass{transform:rotateY(-112deg);box-shadow:-10px 0 20px rgba(0,0,0,.4)}
+.door .lbl{position:absolute;top:8px;left:8px;padding:3px 7px;border-radius:999px;background:rgba(0,0,0,.4);color:rgba(255,255,255,.88);font:700 calc(var(--w) * .11) ui-monospace,Menlo,monospace}
+.door .lk{position:absolute;top:8px;right:8px;width:calc(var(--w) * .2);height:calc(var(--w) * .2);border-radius:50%;background:var(--yellow);display:grid;place-items:center}
+.door .hd{position:absolute;right:8px;top:39%;width:5px;height:22%;border-radius:3px;background:rgba(255,255,255,.5)}
+.door .led{position:absolute;bottom:8px;left:50%;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:rgba(255,255,255,.25)}
+.door .led.ok{background:var(--mint)}
+.door .led.hold{background:var(--t1)}
+.door.open .led{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+.door::after{content:"";position:absolute;inset:-4px;border-radius:16px;border:5px solid var(--yellow);opacity:0;transition:opacity .12s;pointer-events:none}
+.door.hl::after{opacity:1;animation:glow .7s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 8px var(--yellow)}to{box-shadow:0 0 24px var(--yellow)}}
+.door .arrow{position:absolute;left:50%;top:-34px;margin-left:-30px;width:60px;height:60px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;box-shadow:0 0 14px rgba(255,199,44,.6);animation:bounce .6s ease-in-out infinite alternate;z-index:5}
+@keyframes bounce{to{transform:translateY(-20px)}}
+
+/* ---------- Flow layouts (unlock / return) ---------- */
+.flow{flex:1;display:flex;align-items:center;gap:48px;padding:0 48px}
+.flow .wall-col{display:flex;flex-direction:column;align-items:center;gap:18px}
+.flow .wall-cap{font-size:1rem;font-weight:700;color:rgba(255,255,255,.4)}
+.panel{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px;animation:fadeIn .45s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.hi{font-size:1.5rem;font-weight:700;color:var(--yellow)}
+.big-h{font-size:2.75rem;font-weight:700;line-height:1.1}
+.muted-d{font-size:1.3rem;color:rgba(255,255,255,.75);line-height:1.45}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.passchip{display:inline-flex;align-items:center;gap:14px;padding:14px 18px;border-radius:18px;background:rgba(255,255,255,.08);font-size:1.25rem;font-weight:700;align-self:flex-start}
+.ok-tick{color:var(--mint);transform:scale(.2);opacity:0;transition:all .4s cubic-bezier(.3,1.6,.5,1)}
+.ok-tick.on{transform:none;opacity:1}
+.door-pill{align-self:flex-start;padding:6px 12px;border-radius:999px;background:var(--yellow);color:var(--ink);font-weight:700;font-size:1.1rem}
+.fly{animation:flyOut .8s cubic-bezier(.3,1.3,.5,1) both}
+@keyframes flyOut{from{opacity:0;transform:translateX(-360px) scale(.35) rotate(-20deg)}to{opacity:1;transform:rotate(-4deg)}}
+.facts{display:flex;gap:12px}
+.facts div{flex:1;padding:16px;border-radius:18px;background:rgba(255,255,255,.07)}
+.facts i{color:var(--yellow);font-style:normal}
+.facts b{display:block;font-size:1.4rem;margin-top:4px}
+.facts span{font-size:.9rem;color:rgba(255,255,255,.55)}
+.jump{display:flex;gap:18px;align-items:center;padding:18px;border-radius:22px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,199,44,.5);animation:popIn .5s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.jump .bm{width:60px;height:60px;border-radius:18px;background:var(--yellow);display:grid;place-items:center;flex-shrink:0}
+.jump b{font-size:1.4rem}
+.jump span{display:block;font-size:.95rem;color:rgba(255,255,255,.6);margin-top:6px}
+.prog{height:12px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;border-radius:6px;background:var(--yellow);width:0;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.circle-ic{width:90px;height:90px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;animation:popIn .5s cubic-bezier(.3,1.6,.5,1) both}
+
+/* Follow-up screens in return */
+.follow{flex:1;display:flex;align-items:center;gap:48px;padding:40px 56px}
+.follow .book-col{width:240px;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+.follow .book-col h3{font-family:var(--serif);font-weight:600;font-size:1.65rem;line-height:1.15}
+.safe{display:flex;align-items:center;gap:8px;color:var(--mint);font-weight:700;font-size:.95rem;margin-top:6px}
+.choices{display:flex;gap:18px;height:250px}
+.choice{flex:1;display:flex;flex-direction:column;align-items:flex-start;padding:26px;border-radius:30px;text-align:left;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);color:#fff;transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.choice:active{transform:scale(.97)}
+.choice.y{background:var(--yellow);border-color:transparent;color:var(--ink)}
+.choice b{margin-top:auto;font-size:1.9rem}
+.choice span{font-size:1.05rem;opacity:.75;margin-top:8px;line-height:1.35}
+.choice svg{animation:wiggle 3s ease-in-out infinite}
+@keyframes wiggle{0%,80%,100%{transform:none}85%{transform:scale(1.2) rotate(-8deg)}90%{transform:scale(1.15) rotate(6deg)}}
+.starpick{display:flex;align-items:center;gap:18px}
+.starpick button{width:66px;height:66px;display:grid;place-items:center;color:rgba(255,255,255,.3);transition:transform .35s cubic-bezier(.3,1.8,.5,1),color .2s}
+.starpick button svg{width:50px;height:50px}
+.starpick button.on{color:var(--yellow);transform:scale(1.08)}
+.starpick button:not(.on){transform:rotate(-12deg)}
+.starpick .lab{font-size:1.4rem;font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:10px}
+.tag{display:flex;align-items:center;gap:6px;padding:11px 16px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-weight:700;font-size:1rem;transition:background .2s}
+.tag.on{background:var(--yellow);color:var(--ink)}
+.light .tag{background:var(--grey);color:var(--ink)}
+.light .tag.on{background:var(--green);color:#fff}
+.anon{display:flex;align-items:center;gap:8px;padding:11px 16px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:700}
+textarea.review{width:100%;min-height:92px;resize:none;padding:16px;border-radius:18px;border:2px solid transparent;background:rgba(255,255,255,.08);color:#fff;font-size:1.2rem;line-height:1.4;user-select:text;-webkit-user-select:text}
+textarea.review:focus{outline:none;border-color:var(--yellow)}
+textarea.review::placeholder{color:rgba(255,255,255,.4)}
+.pagebig{display:flex;align-items:baseline;gap:10px}
+.pagebig small{font-size:1.6rem;font-weight:700;color:rgba(255,255,255,.6)}
+.pagebig b{font-size:4.75rem;color:var(--yellow);font-variant-numeric:tabular-nums;min-width:60px}
+.pagebig b.bad{color:var(--salmon)}
+.pagebig span{font-size:1.4rem;color:rgba(255,255,255,.5)}
+.note-line{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.05rem;color:rgba(255,255,255,.65)}
+.note-line.bad{color:var(--salmon)}
+.linkbtn{display:flex;align-items:center;gap:8px;color:var(--yellow);font-weight:700;font-size:1.05rem;align-self:flex-start}
+
+/* Keypad */
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.key{height:86px;border-radius:22px;background:#fff;font-size:2.25rem;font-weight:700;display:grid;place-items:center;transition:transform .15s cubic-bezier(.3,1.6,.5,1)}
+.key:active{transform:scale(.92)}
+.key.fn{background:var(--grey);font-size:1.25rem}
+.pad.dk .key{background:rgba(255,255,255,.1);color:#fff;height:74px}
+.pad.dk .key.fn{background:rgba(255,255,255,.05)}
+
+/* ---------- Code entry ---------- */
+.code-body{flex:1;display:flex;align-items:center;gap:64px;padding:0 56px}
+.seg{display:flex;gap:4px;padding:4px;border-radius:18px;background:var(--grey);max-width:520px}
+.seg button{flex:1;height:54px;border-radius:14px;font-weight:700;font-size:1.1rem;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(24,32,51,.12)}
+.boxes{display:flex;align-items:center;gap:14px}
+.box{width:74px;height:96px;border-radius:20px;background:#fff;border:2px solid var(--line);display:grid;place-items:center;font-size:2.9rem;font-weight:700;font-variant-numeric:tabular-nums;transition:transform .25s cubic-bezier(.3,1.8,.5,1)}
+.box.q{width:92px}
+.box.cur{border:3px solid var(--ink)}
+.box.q.cur{border-color:var(--blue)}
+.box.full{transform:scale(1.04)}
+.dash{width:16px;height:5px;border-radius:3px;background:var(--line)}
+.shake{animation:shake .45s linear}
+@keyframes shake{0%,100%{transform:none}16%,50%,84%{transform:translateX(14px)}33%,66%{transform:translateX(-14px)}}
+.tip{display:flex;align-items:center;gap:8px;font-size:1.05rem;color:var(--muted)}
+
+/* ---------- Browse ---------- */
+.browse-head{display:flex;align-items:flex-end;justify-content:space-between;padding:24px 32px 0}
+.gchips{display:flex;gap:10px;padding:18px 32px}
+.gchip{height:50px;padding:0 20px;border-radius:999px;background:#fff;border:1.5px solid var(--line);font-weight:700;font-size:1.1rem}
+.gchip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,170px);justify-content:space-between;gap:30px 26px;padding:4px 32px 40px;align-content:start;-webkit-overflow-scrolling:touch}
+.bt{text-align:left;width:170px;animation:rise2 .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise2{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+.bt .t{font-weight:700;font-size:1.1rem;margin-top:10px;line-height:1.25}
+.bt .a{color:var(--muted);font-size:.95rem;margin-top:2px}
+.bt .r{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:.8rem;color:var(--muted)}
+.bt .heldtag{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;background:var(--yellow);color:var(--ink);font-size:.8rem;font-weight:700;z-index:2}
+.bt.held .cover{filter:saturate(.5)}
+
+/* Overlays */
+#overlay{position:absolute;inset:0;z-index:20;pointer-events:none}
+#overlay.on{pointer-events:auto}
+.scrim{position:absolute;inset:0;background:rgba(24,32,51,.5);animation:fade .3s}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:590px;padding:36px;border-radius:40px 40px 0 0;background:var(--bg);display:flex;gap:40px;animation:sheetUp .5s cubic-bezier(.2,.9,.25,1)}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+.sheet .left{display:flex;flex-direction:column;align-items:center;gap:18px;width:240px;flex-shrink:0}
+.sheet .left .cover{animation:turn .7s cubic-bezier(.2,.8,.2,1)}
+@keyframes turn{from{transform:perspective(600px) rotateY(25deg) scale(.8)}to{transform:none}}
+.sheet .mid{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-right:6px}
+.sheet .right{width:260px;display:flex;flex-direction:column;gap:14px;flex-shrink:0}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{padding:7px 12px;border-radius:999px;background:#fff;font-weight:700;font-size:.95rem}
+.pill.h{background:var(--held)}
+.blurb{font-family:var(--serif);font-size:1.4rem;line-height:1.5}
+.lastnote{padding:18px;border-radius:20px;background:var(--cream)}
+.lastnote small{font-weight:700;color:var(--muted)}
+.lastnote p{font-family:var(--serif);font-size:1.25rem;margin:6px 0}
+.rcard{padding:16px;border-radius:18px;background:#fff}
+.rcard .rh{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;color:var(--muted)}
+.rcard p{font-family:var(--serif);font-size:1.15rem;margin-top:8px}
+.rcard .tags{margin-top:8px;gap:6px}
+.rcard .tag{padding:5px 10px;font-size:.8rem;background:var(--grey);color:var(--ink)}
+.tl{list-style:none}
+.tl li{position:relative;padding:0 0 16px 28px}
+.tl li::before{content:"";position:absolute;left:0;top:4px;width:14px;height:14px;border-radius:50%;border:3px solid var(--blue);background:#fff;box-sizing:border-box}
+.tl li:first-child::before{background:var(--blue)}
+.tl li::after{content:"";position:absolute;left:6px;top:20px;bottom:0;width:2px;background:var(--line)}
+.tl li:last-child::after{display:none}
+.tl b{display:block;font-size:1.05rem}
+.tl span{color:var(--muted);font-size:.95rem}
+.heldbox{padding:20px;border-radius:22px;background:var(--held);text-align:center}
+.heldbox b{display:block;font-size:1.25rem;margin-top:6px}
+.heldbox span{font-size:.95rem;color:var(--muted)}
+.appqr{padding:14px;border-radius:20px;background:#fff;text-align:center;font-size:.9rem;color:var(--muted);animation:popIn .4s cubic-bezier(.3,1.5,.5,1)}
+.appqr svg,.qrbox svg{width:100%;height:auto}
+.reel{position:absolute;inset:0;background:rgba(24,32,51,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;color:#fff;animation:fade .3s}
+.reel h3{font-size:2.1rem}
+.reel .win{width:320px;height:400px;border-radius:36px;background:rgba(255,255,255,.06);display:grid;place-items:center;overflow:hidden;border:5px solid transparent;transition:border-color .3s}
+.reel .win.landed{border-color:var(--yellow)}
+.reel .win .cover{animation:reelIn .12s ease-out}
+.reel .win.landed .cover{animation:land .5s cubic-bezier(.3,1.8,.5,1) forwards}
+@keyframes reelIn{from{transform:translateY(-120%);opacity:0}to{transform:none;opacity:1}}
+@keyframes land{from{transform:scale(1)}to{transform:scale(1.08)}}
+.reel .acts{display:flex;gap:16px;width:520px;opacity:0;transition:opacity .3s}
+.reel .acts.on{opacity:1}
+
+/* Alert, still-there, toast */
+.alert{position:absolute;inset:0;display:grid;place-items:center;background:rgba(24,32,51,.5);animation:fade .25s}
+.alert .card{display:flex;align-items:center;gap:36px;padding:44px;border-radius:36px;background:var(--bg);box-shadow:0 20px 40px rgba(24,32,51,.3);animation:alertIn .45s cubic-bezier(.3,1.5,.5,1),shake .45s .2s linear}
+@keyframes alertIn{from{opacity:0;transform:scale(.85)}}
+.alert .card .cover{transform:rotate(-5deg);filter:grayscale(.4)}
+.alert .ic{width:76px;height:76px;border-radius:50%;background:var(--held);display:grid;place-items:center}
+.alert h3{font-size:2.1rem;margin-top:14px}
+.alert p{font-size:1.25rem;color:var(--muted);line-height:1.45;margin-top:10px;max-width:520px}
+.alert .acts{display:flex;gap:14px;margin-top:22px}
+.still{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:rgba(24,32,51,.6);animation:fade .3s}
+.still .card{display:flex;flex-direction:column;align-items:center;gap:18px;padding:48px;border-radius:36px;background:var(--bg);text-align:center}
+#toast{position:absolute;left:50%;top:104px;z-index:50;transform:translate(-50%,-30px);opacity:0;padding:14px 22px;border-radius:999px;background:var(--ink);color:#fff;font-weight:700;font-size:1.15rem;box-shadow:0 8px 20px rgba(24,32,51,.3);transition:all .35s cubic-bezier(.3,1.4,.5,1);pointer-events:none;white-space:nowrap}
+#toast.on{transform:translate(-50%,0);opacity:1}
+#confetti{position:absolute;inset:0;z-index:30;pointer-events:none}
+
+/* ---------- Help ---------- */
+.help{flex:1;overflow-y:auto;padding:32px;display:flex;flex-direction:column;gap:26px}
+.steps{display:flex;gap:18px}
+.step{flex:1;min-height:230px;padding:22px;border-radius:26px;background:#fff;animation:slideR .55s cubic-bezier(.2,.8,.2,1) both}
+.step .row{display:flex;justify-content:space-between;align-items:center}
+.step .ic{width:76px;height:76px;border-radius:22px;display:grid;place-items:center;animation:wiggle 3s ease-in-out infinite}
+.step .n{font-size:2.75rem;font-weight:700;color:var(--grey)}
+.step b{display:block;font-size:1.4rem;margin-top:14px}
+.step span{display:block;color:var(--muted);margin-top:6px;line-height:1.4}
+.hcards{display:flex;gap:18px;align-items:stretch}
+.hcard{flex:1;padding:22px;border-radius:26px;background:#fff;display:flex;flex-direction:column;gap:14px}
+.hcard h4{font-size:1.4rem}
+.switch{position:relative;width:62px;height:36px;border-radius:18px;background:var(--line);transition:background .2s;flex-shrink:0}
+.switch::after{content:"";position:absolute;left:3px;top:3px;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.switch.on{background:var(--blue)}
+.switch.on::after{transform:translateX(26px)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;font-size:1.15rem;width:100%;text-align:left}
+
+/* ---------- Staff ---------- */
+.gate{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}
+.gate .badge{width:100px;height:100px;border-radius:50%;background:var(--yellow);display:grid;place-items:center}
+.dots{display:flex;gap:18px}
+.dots i{width:22px;height:22px;border-radius:50%;background:var(--line);transition:all .25s cubic-bezier(.3,1.8,.5,1)}
+.dots i.on{background:var(--ink);transform:scale(1.15)}
+.gate .pad{grid-template-columns:repeat(3,96px)}
+.gate .key{height:76px;font-size:1.9rem}
+.dash-body{flex:1;display:flex;gap:28px;padding:22px 28px 28px;min-height:0}
+.dash-body .wall-side{display:flex;flex-direction:column;gap:12px}
+.legend{display:flex;gap:16px;font-size:.9rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.dash-right{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-bottom:20px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.metric{padding:16px;border-radius:20px;background:#fff}
+.metric b{display:block;font-size:1.65rem}
+.metric span{font-size:.9rem;color:var(--muted)}
+.qrgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.qrbox{padding:12px;border-radius:20px;background:#fff;text-align:center}
+.qrbox svg{width:120px;margin:0 auto}
+.qrbox b{display:block;font-size:.95rem;margin-top:6px}
+.qrbox span{font-size:.8rem;color:var(--muted)}
+.scroll{overflow-y:auto}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="app"></div>
+  <div id="overlay"></div>
+  <canvas id="confetti" width="1280" height="860"></canvas>
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   Between Stops kiosk, web version.
+   Mirrors the native SwiftUI app in BetweenStopsKiosk/.
+   ============================================================ */
+
+/* ---------- Data (same catalogue as the phone app and native kiosk) ---------- */
+const STATIONS = ['Penrith','Blacktown','Parramatta','Granville','Lidcombe','Strathfield','Burwood','Redfern','Central','Town Hall','Wynyard','North Sydney','Chatswood','Hornsby'];
+const GENRES = ['All','Short reads','Fiction','Non-fiction','Poetry','Kids'];
+const TAGS = ["Couldn't put it down","Perfect for a short trip","Made me laugh","Read it in one go","Beautiful writing","Slow start, worth it","Great for kids","Learned something"];
+const PHONE_APP = 'https://rjschweitz.github.io/test';
+const CAR = 2;
+
+const BOOKS = [
+  { id:'redfern', num:11, title:'The Long Way to Redfern', author:'Mae Okafor', genre:'Fiction', pages:312, c1:'#2D5BA8', c2:'#FFC72C', art:'sun', km:412, barcode:'9780000000017',
+    blurb:'Two sisters catch the same train every morning for a year without saying a word to each other. One of them is keeping a secret about the line.',
+    trips:[['Left on this train at Strathfield','Today, 6:58am'],['Read from Hornsby to Central by Sam','Yesterday'],['Read from Epping to Chatswood','3 days ago'],['First shelved at Parramatta','2 weeks ago']],
+    note:{text:'Read this between Lidcombe and Central and completely missed my stop. Worth it.', by:'Sam'},
+    reviews:[{stars:5,text:'Read this between Lidcombe and Central and completely missed my stop.',tags:["Couldn't put it down"],by:'Sam',when:'Yesterday'},{stars:4,text:'The ending on the platform got me.',tags:['Beautiful writing'],by:'Priya',when:'Last week'}] },
+  { id:'tides', num:12, title:'Small Tides', author:'Jun Park', genre:'Poetry', pages:84, c1:'#1F7A6B', c2:'#F5E6C8', art:'waves', km:138, barcode:'9780000000024',
+    blurb:'Short poems about harbours, ferries and the people you only ever see on the morning commute.',
+    trips:[['Left on this train by Priya','Today, 7:12am'],['Read on the T4 to Bondi Junction','Last week']],
+    note:{text:'Page 31 is the one. Read it twice.', by:'Priya'},
+    reviews:[{stars:5,text:'Page 31 is the one. Read it twice.',tags:['Perfect for a short trip'],by:'Priya',when:'Today'}] },
+  { id:'signal', num:13, title:'Signal Failure', author:'Dana Whitlock', genre:'Non-fiction', pages:240, c1:'#C2402A', c2:'#FFF4E8', art:'stripes', km:265, barcode:'9780000000031',
+    blurb:'How a city keeps a thousand trains moving every day, and what happens in the control room when one of them stops.',
+    trips:[['Left at Central by Marco','Yesterday'],['Read from Penrith to Blacktown','4 days ago']],
+    reviews:[{stars:4,text:"I'll never complain about delays again.",tags:['Learned something'],by:'Marco',when:'Yesterday'}] },
+  { id:'pip', num:14, title:'Pip and the Night Train', author:'Hana Lowe', genre:'Kids', pages:32, c1:'#FFC72C', c2:'#182033', art:'dots', km:74, barcode:'9780000000048',
+    blurb:'Pip is too excited to sleep, so the night train takes her on a tour of every sleeping town on the line.',
+    trips:[['Left on this train by Tom','Yesterday'],['Read at Wynyard','Last week']],
+    reviews:[{stars:5,text:'My daughter asked for it three nights running.',tags:['Great for kids'],by:'Tom',when:'Last week'}] },
+  { id:'kettle', num:15, title:'Everything the Kettle Knows', author:'Rosa Mendes', genre:'Fiction', pages:198, c1:'#E8B4BC', c2:'#5A2333', art:'circle', km:96, barcode:'9780000000055',
+    blurb:'A share house, five flatmates and one kettle that has heard every argument. Funny, warm and quick to get into.',
+    trips:[['Left on this train by Jess','Today, 6:40am']],
+    reviews:[{stars:4,text:'Laughed out loud on the quiet carriage. Sorry everyone.',tags:['Made me laugh'],by:'Jess',when:'Today'},{stars:3,text:'',tags:['Slow start, worth it'],by:'Ben',when:'2 weeks ago'}] },
+  { id:'birds', num:16, title:'A Field Guide to City Birds', author:'Tom Ashby', genre:'Non-fiction', pages:96, c1:'#7FA650', c2:'#FFFFFF', art:'bird', km:187, barcode:'9780000000062',
+    blurb:'Spot the ibis, the noisy miner and the currawong from the train window. Pocket sized and great for short trips.',
+    trips:[['Left on this train by Alex','2 days ago'],['Read at Lidcombe','Last week']],
+    reviews:[{stars:4,text:'Spotted three currawongs at Strathfield thanks to this.',tags:['Learned something'],by:'Alex',when:'2 days ago'}] },
+  { id:'katoomba', num:17, title:'Last Stop, Katoomba', author:'Ellie Brandt', genre:'Fiction', pages:288, c1:'#3B2F6B', c2:'#FFC72C', art:'moon', km:54, barcode:'9780000000079',
+    blurb:'A missed connection, a mountain fog and a stranger who seems to know exactly where the night is going.',
+    trips:[['Left on this train by Ana','Yesterday']],
+    reviews:[{stars:5,text:'Perfect foggy morning read.',tags:['Read it in one go'],by:'Ana',when:'Yesterday'}] },
+  { id:'quiet', num:18, title:'The Quiet Carriage', author:'Marcus Lee', genre:'Fiction', pages:276, c1:'#182033', c2:'#E9ECF1', art:'lines', km:211, barcode:'9780000000086',
+    blurb:'Nobody is allowed to talk in the quiet carriage, which makes it the perfect place to plan something.',
+    trips:[['Left on this train by Kim','Today, 7:30am']], reviews:[] },
+  { id:'bread', num:19, title:'Bread, Mostly', author:'Lena Fischer', genre:'Non-fiction', pages:198, c1:'#D9A441', c2:'#3A2A12', art:'circle', km:129, barcode:'9780000000093',
+    blurb:'A baker writes about early starts, sourdough and the regulars who keep a small shop going.',
+    trips:[['Left on this train by Ben','Yesterday']], reviews:[] },
+  { id:'map', num:20, title:'How to Fold a Map', author:'Noor Haddad', genre:'Non-fiction', pages:128, c1:'#E9ECF1', c2:'#2D5BA8', art:'lines', km:302, barcode:'9780000000109',
+    blurb:'Short essays about getting lost on purpose, from a writer who has never once folded a map the right way.',
+    trips:[['Left on the 8:20 by Lily','Yesterday']], reviews:[] },
+  { id:'fig', num:21, title:'The Fig Tree Club', author:'Ari Coleman', genre:'Kids', pages:64, c1:'#4E8A3E', c2:'#FFE7A3', art:'circle', km:88, barcode:'9780000000116',
+    blurb:'Four friends, one giant fig tree in the park, and a summer holiday that nobody wants to end.',
+    trips:[['Left on the 8:20 by Joel','2 days ago']], reviews:[] },
+  { id:'orchard', num:22, title:'Orchard Hours', author:'Sofia Brennan', genre:'Fiction', pages:240, c1:'#B5523B', c2:'#FBE3C9', art:'sun', km:176, barcode:'9780000000123',
+    blurb:'A woman goes back to her family orchard for one harvest and ends up staying for the whole year.',
+    trips:[['Picked up by Alex','Yesterday'],['Left on this train by Mia','Last week']], reviews:[] },
+  { id:'salt', num:23, title:'Salt and Static', author:'Priya Raman', genre:'Fiction', pages:224, c1:'#5B8DB8', c2:'#FFFFFF', art:'waves', km:0, barcode:'9780000000130',
+    blurb:'A radio host on the late shift starts getting calls from someone who says they are on a train that stopped running years ago.',
+    trips:[['Bought and shared by Alex','Today']], reviews:[] },
+];
+
+const SLOT_LAYOUT = { A1:'redfern', A2:'tides', A3:'signal', A4:'pip', B1:'kettle', B3:'birds', B4:'katoomba', C1:'quiet', C2:'bread' };
+const SLOT_HOLDS = { A1:'482913', A2:'105277' };
+const LOANS = { salt:'Alex', orchard:'Alex', map:'Priya', fig:'Joel' };
+const BOOKMARKS = { Alex:{ redfern:142 } };
+
+const DEMO_PASSES = [
+  { label:"Alex's pass", detail:'Valid reservation', payload:'betweenstops://collect?code=482913&book=redfern&name=Alex' },
+  { label:"Sam's pass", detail:'Valid reservation', payload:'betweenstops://collect?code=105277&book=tides&name=Sam' },
+  { label:"Jess's pass", detail:'Expired', payload:'betweenstops://collect?code=660021&book=signal&name=Jess' },
+  { label:"Kim's pass", detail:'Book is on another train', payload:'betweenstops://collect?code=777314&book=fig&name=Kim' },
+];
+const DEMO_RETURNS = [
+  { label:'Salt and Static', detail:'Out with Alex', payload:'betweenstops://return?book=salt' },
+  { label:'Orchard Hours', detail:'Out with Alex', payload:'9780000000123' },
+  { label:'How to Fold a Map', detail:'Out with Priya', payload:'betweenstops://return?book=map' },
+];
+
+/* ---------- Helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const readTime = p => { const m = Math.round(p * 1.5); return m < 60 ? `${m} min` : `${Math.round(m / 60)} hr`; };
+
+/* ---------- State ---------- */
+const S = {};
+function freshState(){
+  const now = Date.now();
+  Object.assign(S, {
+    route:'attract', params:null,
+    books: clone(BOOKS),
+    slots: ['A','B','C'].flatMap(r => [1,2,3,4].map(c => { const id = r + c; return { id, book: SLOT_LAYOUT[id] || null, hold: SLOT_HOLDS[id] || null }; })),
+    reservations: [
+      { code:'482913', pin:'1107', book:'redfern', name:'Alex', exp: now + 25*60e3 },
+      { code:'105277', pin:'1258', book:'tides', name:'Sam', exp: now + 40*60e3 },
+      { code:'660021', pin:'1330', book:'signal', name:'Jess', exp: now - 6*60e3 },
+      { code:'777314', pin:'2144', book:'fig', name:'Kim', exp: now + 30*60e3 },
+      { code:'391540', pin:'2016', book:'map', name:'Priya', exp: now + 20*60e3, collected:true },
+    ],
+    loans: clone(LOANS), bookmarks: clone(BOOKMARKS),
+    borrowed:37, returned:29, km:18420, openDoors:new Set(),
+    showDemo:true, lastTouch: now, still:false, alert:null,
+    nextStop:3, legStart: now, legLen:40000,
+  });
+}
+freshState();
+// Saved pages and reviews live in this browser so they survive a reload, like an account would.
+(function restore(){
+  const saved = store.get('bs-kiosk-account');
+  if (!saved) return;
+  if (saved.bookmarks) S.bookmarks = saved.bookmarks;
+  for (const [id, reviews] of Object.entries(saved.reviews || {})) { const b = book(id); if (b) b.reviews = reviews; }
+})();
+function persist(){
+  store.set('bs-kiosk-account', { bookmarks: S.bookmarks, reviews: Object.fromEntries(S.books.map(b => [b.id, b.reviews])) });
+}
+
+const book = id => S.books.find(b => b.id === id);
+const slotOf = id => S.slots.find(s => s.book === id);
+const isHeld = id => !!slotOf(id)?.hold;
+const shelfBooks = () => S.slots.filter(s => s.book).map(s => book(s.book));
+const available = () => S.slots.filter(s => s.book && !s.hold).length;
+const rating = b => b.reviews.length ? b.reviews.reduce((a, r) => a + r.stars, 0) / b.reviews.length : null;
+const station = i => STATIONS[(i + STATIONS.length) % STATIONS.length];
+
+/* ---------- Icons ---------- */
+const sv = (p, s = 24, w = 2.2, fill = 'none') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const I = {
+  chevL: s => sv('<path d="m15 18-6-6 6-6"/>', s || 22, 2.6),
+  chevR: s => sv('<path d="m9 6 6 6-6 6"/>', s || 22, 2.6),
+  tram: s => sv('<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l-2-4M15 21l2-4"/><circle cx="9" cy="14" r=".5" fill="currentColor"/><circle cx="15" cy="14" r=".5" fill="currentColor"/>', s || 18, 2.4),
+  qr: s => sv('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h3v-3"/>', s || 22),
+  grid: s => sv('<circle cx="5" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="19" cy="5" r="1.6" fill="currentColor"/><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/><circle cx="5" cy="19" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/><circle cx="19" cy="19" r="1.6" fill="currentColor"/>', s || 22),
+  ret: s => sv('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', s || 32, 2.6),
+  q: s => sv('<path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>', s || 32, 2.8),
+  check: s => sv('<path d="M5 12.5 10 17 19 7"/>', s || 22, 3),
+  star: s => sv('<path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.5 1.1 6.3L12 17.3l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/>', s || 18, 1.5, 'currentColor'),
+  starO: s => sv('<path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.5 1.1 6.3L12 17.3l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/>', s || 18, 1.8),
+  starH: s => `<svg width="${s||18}" height="${s||18}" viewBox="0 0 24 24" aria-hidden="true"><defs><clipPath id="hc"><rect x="0" y="0" width="12" height="24"/></clipPath></defs><path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.5 1.1 6.3L12 17.3l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path clip-path="url(#hc)" d="m12 2.8 2.8 5.8 6.3.9-4.6 4.5 1.1 6.3L12 17.3l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z" fill="currentColor"/></svg>`,
+  lock: s => sv('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', s || 20, 2.4),
+  unlock: s => sv('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>', s || 22, 2.4),
+  bookmark: s => sv('<path d="M6 3h12v18l-6-4-6 4z"/>', s || 26, 2.2, 'currentColor'),
+  bookmarkO: s => sv('<path d="M6 3h12v18l-6-4-6 4z"/>', s || 20, 2.2),
+  seal: s => sv('<path d="M12 2.5 14.6 4l3 .1 1.4 2.6 2.5 1.6-.4 3 .9 2.9-2.2 2-.7 3-2.9.8-2.2 2-2.7-1.2L9.4 22l-2.2-2-2.9-.8-.7-3-2.2-2 .9-2.9-.4-3L4.4 6.7 5.8 4.1l3-.1z" fill="currentColor" stroke="none"/><path d="m8.5 12.2 2.4 2.3 4.8-5" stroke="#FFC72C" stroke-width="2.4"/>', s || 40),
+  heart: s => sv('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>', s || 36, 2, 'currentColor'),
+  bell: s => sv('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/>', s || 22),
+  phone: s => sv('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>', s || 22),
+  dice: s => sv('<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="16" cy="8" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="8" cy="16" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/>', s || 24),
+  door: s => sv('<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17M3 21h18M15 12h.01"/>', s || 18),
+  spark: s => sv('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>', s || 22),
+  sun: s => sv('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', s || 20),
+  del: s => sv('<path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z" fill="currentColor" stroke="none"/><path d="m11 9 6 6M17 9l-6 6" stroke="#fff" stroke-width="2.4"/>', s || 30),
+  bolt: s => sv('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', s || 20, 2, 'currentColor'),
+  eyeOff: s => sv('<path d="M3 3l18 18M10.6 6.1A9.5 9.5 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-2.7 3.2M6.6 6.6C4.2 8.2 3 12 3 12s4 6 9 6a9 9 0 0 0 4-.9"/>', s || 20),
+  user: s => sv('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', s || 20),
+  send: s => sv('<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>', s || 22),
+  bulb: s => sv('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>', s || 20),
+  map: s => sv('<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>', s || 22),
+  clock: s => sv('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', s || 22),
+  users: s => sv('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>', s || 22),
+  alert: s => sv('<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>', s || 20),
+  plus: s => sv('<path d="M12 5v14M5 12h14"/>', s || 18, 2.6),
+  key: s => sv('<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>', s || 44, 2.4),
+  hand: s => sv('<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11.5v-2a1.5 1.5 0 0 1 3 0V12M14 10.5a1.5 1.5 0 0 1 3 0V12M17 11.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7L4.3 14.6a1.5 1.5 0 0 1 2.4-1.8L8 14.5"/>', s || 30, 2),
+  book: s => sv('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>', s || 36),
+  paste: s => sv('<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/>', s || 18),
+  wand: s => sv('<path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1zM4 20 14 10"/>', s || 18),
+  fs: s => sv('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', s || 20),
+};
+const LOGO = s => `<svg width="${s}" height="${s}" viewBox="0 0 30 30" aria-hidden="true"><rect x="4" y="5" width="6" height="20" rx="1.5" fill="#FFC72C"/><rect x="12" y="8" width="6" height="17" rx="1.5" fill="#fff"/><rect x="20" y="4" width="6" height="21" rx="1.5" fill="#2D5BA8"/></svg>`;
+
+/* ---------- Covers ---------- */
+function art(b){
+  const c = b.c2;
+  return {
+    sun:`<circle cx="70" cy="34" r="22" fill="${c}"/><rect x="0" y="62" width="100" height="3" fill="${c}" opacity=".5"/>`,
+    waves:`<path d="M0 30 Q12 22 25 30 T50 30 T75 30 T100 30" stroke="${c}" stroke-width="4" fill="none"/><path d="M0 44 Q12 36 25 44 T50 44 T75 44 T100 44" stroke="${c}" stroke-width="4" fill="none" opacity=".6"/><path d="M0 58 Q12 50 25 58 T50 58 T75 58 T100 58" stroke="${c}" stroke-width="4" fill="none" opacity=".3"/>`,
+    stripes:`<path d="M-10 40 L40 -10 M10 40 L60 -10 M30 40 L80 -10 M50 40 L100 -10 M70 40 L120 -10" stroke="${c}" stroke-width="7" opacity=".9"/>`,
+    circle:`<circle cx="50" cy="40" r="30" fill="none" stroke="${c}" stroke-width="5"/><circle cx="50" cy="40" r="12" fill="${c}"/>`,
+    dots:[0,1,2,3,4].map(r=>[0,1,2,3,4].map(k=>`<circle cx="${14+k*18}" cy="${12+r*14}" r="3.5" fill="${c}" opacity="${r===2&&k===2?1:.45}"/>`).join('')).join(''),
+    bird:`<path d="M20 50 q15 -30 30 -10 q10 -20 30 -14 q-12 4 -18 20 q-8 22 -42 4z" fill="${c}"/><circle cx="66" cy="28" r="2.5" fill="${b.c1}"/>`,
+    moon:`<circle cx="62" cy="32" r="20" fill="${c}"/><circle cx="72" cy="26" r="17" fill="${b.c1}"/><circle cx="24" cy="18" r="1.6" fill="${c}"/><circle cx="36" cy="44" r="1.2" fill="${c}"/><circle cx="16" cy="54" r="1.4" fill="${c}"/>`,
+    lines:[0,1,2,3,4,5,6].map(i=>`<rect x="10" y="${12+i*8}" width="${80-(i%3)*18}" height="2.5" fill="${c}" opacity=".7"/>`).join(''),
+  }[b.art];
+}
+function cover(b, w = 120, text = true, extra = '', style = ''){
+  return `<div class="cover ${extra}" style="${style};--c1:${b.c1};--c2:${b.c2};width:${w}px;height:${Math.round(w*1.46)}px;font-size:${w*.125}px" role="img" aria-label="${esc(b.title)} by ${esc(b.author)}"><svg viewBox="0 0 100 146" preserveAspectRatio="xMidYMin slice" aria-hidden="true">${art(b)}</svg>${text && w >= 80 ? `<div class="ct">${esc(b.title)}</div><div class="ca">${esc(b.author)}</div>` : ''}</div>`;
+}
+function stars(v, s = 16, light = false){
+  let h = '';
+  for (let i = 1; i <= 5; i++) h += v >= i ? I.star(s) : v >= i - .5 ? I.starH(s) : I.starO(s);
+  return `<span class="stars${light ? ' light' : ''}" aria-label="${v.toFixed(1)} out of 5 stars">${h}</span>`;
+}
+function qrSvg(text){
+  if (typeof qrcode !== 'function') return '';
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+}
+function ring(seconds, size = 64, dark = false){
+  const r = size / 2 - 5, c = (2 * Math.PI * r).toFixed(1);
+  return `<div class="ring${dark ? ' dk' : ''}" style="width:${size}px;height:${size}px;--c:${c};--d:${seconds}s"><svg width="${size}" height="${size}"><circle class="tr" cx="${size/2}" cy="${size/2}" r="${r}"/><circle class="fl" cx="${size/2}" cy="${size/2}" r="${r}"/></svg><b data-until="${Date.now() + seconds*1000}">${seconds}</b></div>`;
+}
+
+/* ---------- Screen plumbing ---------- */
+let cleanups = [];
+function onLeave(fn){ cleanups.push(fn); }
+function later(fn, ms){ const t = setTimeout(fn, ms); onLeave(() => clearTimeout(t)); }
+function every(fn, ms){ const t = setInterval(fn, ms); onLeave(() => clearInterval(t)); }
+let runId = 0;
+
+function go(route, params = null){
+  cleanups.forEach(f => f()); cleanups = [];
+  runId++;
+  Cam.stop();
+  S.route = route; S.params = params; S.alert = null;
+  closeOverlay();
+  touch();
+  const app = $('#app');
+  app.innerHTML = `<div class="screen enter ${SCREEN_CLASS[route] || ''}">${SCREENS[route](params)}</div>`;
+  MOUNT[route]?.(params);
+  updateJourney(true);
+}
+const SCREEN_CLASS = { attract:'attract', unlock:'dark', place:'dark' };
+
+function touch(){
+  S.lastTouch = Date.now();
+  if (S.still){ S.still = false; $('.still')?.remove(); }
+}
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2600);
+}
+
+function openOverlay(html){ const o = $('#overlay'); o.innerHTML = html; o.classList.add('on'); }
+function closeOverlay(){ const o = $('#overlay'); o.innerHTML = ''; o.classList.remove('on'); }
+
+/* ---------- Sound (tiny chimes, no files) ---------- */
+let actx;
+function chime(notes = [660, 880], len = .12){
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    notes.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * len;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.12, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + len * 2.5);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + len * 3);
+    });
+  } catch {}
+}
+
+/* ---------- Confetti ---------- */
+function confetti(ox = .5, oy = .45, n = 140){
+  const cv = $('#confetti'), ctx = cv.getContext('2d');
+  const pal = ['#FFC72C','#2D5BA8','#ffffff','#F28C1E','#1F7A6B','#E8B4BC','#C2402A'];
+  const bits = Array.from({ length: n }, () => {
+    const a = -Math.PI * (.05 + Math.random() * .9), sp = 500 + Math.random() * 800;
+    return { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, spin: (Math.random() - .5) * 18, s: 10 + Math.random() * 10, w: Math.random() * 6, c: pal[Math.random() * pal.length | 0], book: Math.random() < .25 };
+  });
+  const t0 = performance.now(), X = 1280 * ox, Y = 860 * oy;
+  (function frame(now){
+    const t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, 1280, 860);
+    if (t > 4.5) return;
+    ctx.globalAlpha = Math.max(0, Math.min(1, 4.2 - t));
+    for (const b of bits){
+      const x = X + b.vx * t + Math.sin(t * 6 + b.w) * 10, y = Y + b.vy * t + 650 * t * t;
+      if (y > 900) continue;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(b.spin * t); ctx.fillStyle = b.c;
+      if (b.book){ ctx.fillRect(-b.s*.4, -b.s*.6, b.s*.8, b.s*1.2); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(-b.s*.4, -b.s*.6, 2.5, b.s*1.2); }
+      else ctx.fillRect(-b.s/2, -b.s/4, b.s, b.s/2);
+      ctx.restore();
+    }
+    requestAnimationFrame(frame);
+  })(t0);
+}
+
+/* ---------- Camera scanning (jsQR, or the browser's BarcodeDetector for book barcodes) ---------- */
+const Cam = {
+  stream:null, timer:0, last:'', lastAt:0, gen:0,
+  async start(vf, onCode){
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) return false;
+    const my = ++this.gen;
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    } catch { return false; }
+    // The reader may have moved on while the permission prompt was up.
+    if (!vf.isConnected || my !== this.gen){ stream.getTracks().forEach(t => t.stop()); return false; }
+    this.stream = stream;
+    const video = $('video', vf);
+    video.srcObject = stream;
+    try { await video.play(); } catch {}
+    vf.classList.add('live');
+    let detector = null;
+    if ('BarcodeDetector' in window){ try { detector = new BarcodeDetector({ formats: ['qr_code','ean_13','code_128'] }); } catch {} }
+    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+    this.timer = setInterval(async () => {
+      if (!video.videoWidth || S.alert) return;
+      let code = null;
+      try {
+        if (detector){ const r = await detector.detect(video); code = r[0]?.rawValue; }
+        else if (window.jsQR){
+          const w = 640, h = Math.round(640 * video.videoHeight / video.videoWidth);
+          canvas.width = w; canvas.height = h; ctx.drawImage(video, 0, 0, w, h);
+          code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' })?.data;
+        }
+      } catch {}
+      if (!code) return;
+      if (code === this.last && Date.now() - this.lastAt < 4000) return;
+      this.last = code; this.lastAt = Date.now();
+      $('.flash', vf)?.classList.remove('go'); void vf.offsetWidth; $('.flash', vf)?.classList.add('go');
+      chime([990], .08);
+      onCode(code);
+    }, 250);
+    return true;
+  },
+  stop(){
+    this.gen++;
+    clearInterval(this.timer); this.timer = 0;
+    this.stream?.getTracks().forEach(t => t.stop()); this.stream = null;
+  },
+};
+
+function viewfinder(hint, returning = false){
+  return `<div class="vf" id="vf" style="--s:62%">
+    <video playsinline muted></video>
+    ${returning
+      ? `<div class="phone book"><div class="bc"><div class="bars"></div>9780000000130</div></div>`
+      : `<div class="phone"><small>Your pass</small><div class="qr">${qrSvg(DEMO_PASSES[0].payload)}</div><b>482 913</b></div>`}
+    <div class="frame" style="width:min(62%,330px);height:auto;aspect-ratio:1"><b></b><b></b><b></b><b></b></div>
+    <div class="sweep"></div>
+    <div class="hint">${esc(hint)}</div>
+    <div class="flash"></div>
+  </div>`;
+}
+function demoTray(returning = false){
+  if (!S.showDemo) return '';
+  const list = returning ? DEMO_RETURNS : DEMO_PASSES;
+  return `<div class="demo">
+    <div class="demo-h"><span style="display:flex;align-items:center;gap:6px">${I.wand()} ${returning ? 'Demo book barcodes' : 'Demo passes'}</span>
+      <button class="press" data-a="paste" data-ret="${returning ? 1 : ''}">${I.paste()} Paste code</button></div>
+    <div class="chips-row">${list.map(d => `<button class="dchip press" data-a="scan" data-code="${esc(d.payload)}" data-ret="${returning ? 1 : ''}">${returning ? I.book(22) : I.qr()}<span><b>${esc(d.label)}</b><span>${esc(d.detail)}</span></span></button>`).join('')}</div>
+  </div>`;
+}
+function startCamera(returning){
+  const vf = $('#vf');
+  if (!vf) return;
+  Cam.start(vf, code => handleScan(code, returning)).then(ok => { if (!ok) $('.hint', vf).textContent = returning ? 'Hold the back cover up to the camera' : 'Point your pass here'; });
+}
+
+/* ---------- Top bar & journey ---------- */
+function topbar(home = true){
+  return `<header class="top">
+    ${home
+      ? `<button class="pill-btn press" data-a="home">${I.chevL()} Home</button>`
+      : `<div class="brand"><div class="logo" data-hold="staff" aria-label="Between Stops">${LOGO(30)}</div><div><div class="brand-t">Between Stops</div><div class="brand-s">Library · Car ${CAR}</div></div></div>`}
+    <div class="journey"><span class="t1">T1</span>${journey()}</div>
+    <button class="round press ${document.documentElement.classList.contains('big') ? 'on' : ''}" data-a="textsize" aria-label="Larger text">Aa</button>
+    <div class="clock" data-clock>${clockText()}</div>
+  </header>`;
+}
+function journey(dark = false){
+  return `<div class="jb${dark ? ' dark' : ''}"><div class="jb-l"><small class="jb-label">Next stop</small><b class="jb-name">${station(S.nextStop)}</b></div><div class="jb-track"><i class="jb-fill"></i><span class="jb-train">${I.tram()}</span></div><span class="jb-min">3 min</span></div>`;
+}
+const clockText = () => new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+function updateJourney(force){
+  let p = (Date.now() - S.legStart) / S.legLen;
+  if (p >= 1){ S.nextStop = (S.nextStop + 1) % STATIONS.length; S.legStart = Date.now(); p = 0; force = 'swap'; }
+  const arriving = p > .92, mins = Math.max(1, Math.ceil((1 - p) * 3));
+  $$('.jb').forEach(j => {
+    $('.jb-fill', j).style.width = (p * 100) + '%';
+    $('.jb-train', j).style.left = `calc(${p} * (100% - 34px))`;
+    $('.jb-label', j).textContent = arriving ? 'Arriving at' : 'Next stop';
+    $('.jb-min', j).textContent = arriving ? 'Now' : `${mins} min`;
+    const n = $('.jb-name', j);
+    if (n.textContent !== station(S.nextStop)){ n.textContent = station(S.nextStop); n.classList.remove('swap'); void n.offsetWidth; n.classList.add('swap'); }
+  });
+  $$('[data-clock]').forEach(c => c.textContent = clockText());
+}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+const SCREENS = {}, MOUNT = {};
+
+/* ---------- Attract ---------- */
+SCREENS.attract = () => {
+  const fl = Array.from({ length: 11 }, (_, i) => {
+    const depth = ((i * 7) % 5) / 4, w = 90 + depth * 90, b = S.books[i % S.books.length];
+    const x = 55 + ((i * 23) % 40), dur = 60 - depth * 26, delay = -((i * 173) % dur);
+    return `<div class="floater" style="left:${x}%;--r:${((i*13)%17)-8}deg;animation-duration:${dur}s;animation-delay:${delay}s;opacity:${(.2 + w/360).toFixed(2)}">${cover(b, w)}</div>`;
+  }).join('');
+  const cars = Array.from({ length: 8 }, (_, i) => `<div class="car${i === 6 ? ' lib' : ''}${i === 7 ? ' head' : ''}${i === 0 ? ' tail' : ''}"><i></i><i></i><i></i></div>`).join('');
+  return `<div data-a="start" style="position:absolute;inset:0"><div class="floaters">${fl}</div><div class="fade"></div>
+    <div class="att-in">
+      <div class="att-top"><div class="logo" style="width:72px;height:72px;border-radius:21px">${LOGO(40)}</div>
+        <div class="journey"><span class="t1">T1</span>${journey(true)}</div></div>
+      <h1 class="att-title">Between Stops</h1>
+      <p class="att-sub">The library that rides with you.</p>
+      <div class="fact">${I.spark()}<span id="fact">${esc(facts()[0])}</span></div>
+      <div class="att-cta"><div class="touch">${I.hand()} Touch to start</div><p>Reserved a book in the app?<br>Touch, then scan your QR code.</p></div>
+    </div>
+    <div class="track"><div class="train">${cars}</div></div></div>`;
+};
+const facts = () => [
+  `${S.borrowed} books borrowed on the T1 today`,
+  `${S.km.toLocaleString()} km travelled by our books this week`,
+  'Most travelled book: The Long Way to Redfern, 412 km',
+  `${available()} books are waiting on this shelf right now`,
+  'Finished a book? Return it to any library train',
+];
+MOUNT.attract = () => {
+  let i = 0;
+  every(() => { i++; const f = $('#fact'); if (f){ f.outerHTML = `<span id="fact">${esc(facts()[i % 5])}</span>`; } }, 3500);
+};
+
+/* ---------- Home ---------- */
+SCREENS.home = () => `${topbar(false)}
+  <div class="home-body">
+    <section class="collect">
+      <div><h2>Collect your book</h2><p class="sub">Hold the QR code from the Between Stops app up to the camera.</p></div>
+      ${viewfinder('Starting camera…')}
+      ${demoTray()}
+      <button class="btn w sm press" data-a="go" data-to="code">${I.grid()} Type my code instead</button>
+    </section>
+    <div class="side">
+      <button class="tile press" data-a="go" data-to="return" style="animation-delay:.05s"><span class="ic" style="background:var(--yellow)">${I.ret()}</span><span><b>Return a book</b><span>Finished? Pop it back on the shelf</span></span><span class="chev">${I.chevR()}</span></button>
+      <button class="tile press" data-a="go" data-to="browse" style="animation-delay:.12s"><span class="fan">${shelfBooks().slice(0,3).map((b,i) => cover(b, 46, false, '', `transform:rotate(${(i-1)*12}deg) translateX(${(i-1)*12}px)`)).join('')}</span><span><b>Browse the shelf</b><span>${available()} books ready to borrow, no app needed</span></span><span class="chev">${I.chevR()}</span></button>
+      <button class="tile press" data-a="go" data-to="help" style="animation-delay:.19s"><span class="ic" style="background:var(--grey)">${I.q()}</span><span><b>How it works</b><span>Help, larger text and staff assist</span></span><span class="chev">${I.chevR()}</span></button>
+      <div class="stats"><div class="stat blue"><b>${S.borrowed}</b><span>borrowed today</span></div><div class="stat"><b>${S.returned}</b><span>returned today</span></div></div>
+    </div>
+  </div>`;
+MOUNT.home = () => startCamera(false);
+
+/* ---------- Code entry (6 digit code or 4 digit quick code) ---------- */
+const C = { quick:false, digits:'' };
+SCREENS.code = () => { C.digits = ''; return `${topbar()}
+  <div class="code-body">
+    <div style="flex:1;display:flex;flex-direction:column;gap:26px" id="code-left">${codeLeft()}</div>
+    <div style="width:380px;display:flex;flex-direction:column;gap:14px">
+      ${keypad('code')}
+      <button class="btn y press" id="code-go" data-a="code-go" disabled style="height:80px">Unlock my book</button>
+    </div>
+  </div>`; };
+function codeLeft(){
+  const n = C.quick ? 4 : 6;
+  let boxes = '';
+  for (let i = 0; i < n; i++){
+    const ch = C.digits[i] || '';
+    boxes += `<div class="box${C.quick ? ' q' : ''}${i === C.digits.length ? ' cur' : ''}${ch ? ' full' : ''}">${ch}</div>`;
+    if (!C.quick && i === 2) boxes += '<i class="dash"></i>';
+  }
+  return `<div><h2 class="title">${C.quick ? 'Enter your quick code' : 'Enter your code'}</h2>
+      <p class="sub">${C.quick ? "The 4 digit quick code from your booking in the app. Handy if you've jotted it down." : "It's the six digits under the QR code in the app, in Held for you."}</p></div>
+    <div class="seg"><button class="${C.quick ? '' : 'on'}" data-a="code-mode" data-q="">${I.qr(20)} 6 digit code</button><button class="${C.quick ? 'on' : ''}" data-a="code-mode" data-q="1">${I.bolt()} 4 digit quick code</button></div>
+    <div class="boxes" id="boxes">${boxes}</div>
+    <p class="tip">${I.bulb()} ${C.quick ? "Try 1107 for Alex's demo quick code" : "Try 482 913 for Alex's demo reservation"}</p>`;
+}
+function keypad(target, dark = false){
+  return `<div class="pad${dark ? ' dk' : ''}">${['1','2','3','4','5','6','7','8','9','clear','0','del'].map(k =>
+    `<button class="key${k.length > 1 ? ' fn' : ''}" data-a="key" data-k="${k}" data-t="${target}" aria-label="${k === 'del' ? 'Delete' : k}">${k === 'del' ? I.del() : k === 'clear' ? 'Clear' : k}</button>`).join('')}</div>`;
+}
+
+/* ---------- Unlock (the big moment) ---------- */
+SCREENS.unlock = job => {
+  const cell = 150;
+  return `<div class="flow">
+    <div class="wall-col">${wall({ cell })}<span class="wall-cap">Car ${CAR} library shelf</span></div>
+    <div class="panel" id="panel">${panelChecking(job)}</div>
+  </div>`;
+};
+function panelChecking(job, opening = false){
+  const b = book(job.book);
+  return `<div class="hi">${job.name ? `Hi ${esc(job.name)}` : 'Good choice'}</div>
+    <div class="big-h">${opening ? `Unlocking door ${job.slot}` : 'Checking your pass'}</div>
+    <div style="display:flex;align-items:center;gap:16px"><div class="spin"></div><span class="muted-d" style="font-size:1.2rem">${opening ? 'Stand clear of the door' : `Finding ${esc(b.title)}`}</span></div>
+    ${job.code ? `<div class="passchip">${I.qr(26)} Pass ${job.code.slice(0,3)} ${job.code.slice(3)} <span class="ok-tick${opening ? ' on' : ''}">${I.check(26)}</span></div>` : ''}`;
+}
+function panelOpen(job){
+  const b = book(job.book), r = rating(b), page = bookmarkFor(job.name, b.id);
+  return `<div style="display:flex;gap:24px;align-items:flex-start">${cover(b, 170, true, 'fly')}
+      <div style="display:flex;flex-direction:column;gap:8px"><span class="door-pill">Door ${job.slot} is open</span>
+        <div class="serif" style="font-size:2rem;line-height:1.1">${esc(b.title)}</div>
+        <div style="color:rgba(255,255,255,.6);font-size:1.1rem">${esc(b.author)}</div>
+        ${r ? `<div style="display:flex;align-items:center;gap:8px">${stars(r, 15, true)}<span style="font-size:.9rem;color:rgba(255,255,255,.55)">${b.reviews.length} review${b.reviews.length === 1 ? '' : 's'}</span></div>` : ''}</div></div>
+    ${page ? jumpBack(page, b) : ''}
+    <p class="muted-d">Take your book from the glowing door. It closes by itself when you're done.</p>
+    <div style="display:flex;gap:18px;align-items:center"><button class="btn y press" data-a="got-it">I've got my book</button>${ring(20, 72, true)}</div>`;
+}
+function jumpBack(page, b){
+  const pct = Math.round(page / b.pages * 100);
+  return `<div class="jump"><span class="bm" style="color:var(--ink)">${I.bookmark()}</span><div style="flex:1"><b>Jump back in at page ${page}</b>
+    <div class="prog"><i data-w="${pct}"></i></div><span>${pct}% through, saved to your account</span></div></div>`;
+}
+function panelDone(job){
+  const b = book(job.book), page = bookmarkFor(job.name, b.id);
+  return `<span class="circle-ic" style="color:var(--ink)">${I.check(40)}</span>
+    <div class="serif" style="font-size:2.9rem;line-height:1.1">${job.name ? `Enjoy the ride, ${esc(job.name)}!` : 'Enjoy the ride!'}</div>
+    <p class="muted-d">${page ? `Open it at page ${page} and you're right back where you left off.` : `${esc(b.title)} is yours for as long as you like.`} When you're done, leave it at any Between Stops kiosk.</p>
+    <div class="facts">
+      <div><i>${I.map()}</i><b>${b.km} km</b><span>travelled so far</span></div>
+      ${page ? `<div><i>${I.bookmarkO(22)}</i><b>Page ${page}</b><span>where you left off</span></div>` : `<div><i>${I.users()}</i><b>#${b.trips.length}</b><span>reader on the line</span></div>`}
+      <div><i>${I.clock()}</i><b>${readTime(b.pages)}</b><span>to read</span></div>
+    </div>
+    <div style="display:flex;gap:18px;align-items:center"><button class="btn w press" style="width:220px" data-a="home">Done</button>${ring(8, 60, true)}</div>`;
+}
+MOUNT.unlock = async job => {
+  const my = runId, alive = () => my === runId;
+  const ids = S.slots.map(s => s.id), target = ids.indexOf(job.slot), steps = ids.length + target + 1;
+  for (let i = 0; i < steps; i++){
+    setHL(ids[i % ids.length]);
+    await sleep(55 + Math.max(0, i - (steps - 6)) * 45);
+    if (!alive()) return;
+  }
+  setHL(job.slot);
+  $('#panel').innerHTML = panelChecking(job, true);
+  await sleep(900); if (!alive()) return;
+  chime([523, 659, 784], .09);
+  doorEl(job.slot).classList.add('open');
+  await sleep(700); if (!alive()) return;
+  doorEl(job.slot).classList.add('empty-out');
+  $('#panel').innerHTML = panelOpen(job);
+  requestAnimationFrame(() => $$('#panel .prog i').forEach(i => i.style.width = i.dataset.w + '%'));
+  confetti(.72, .4);
+  chime([784, 988, 1175], .1);
+  S.job = job;
+  later(() => finishCollect(job), 20000);
+};
+function finishCollect(job){
+  if (S.route !== 'unlock' || S.job !== job || job.done) return;
+  job.done = true;
+  touch();
+  doorEl(job.slot)?.classList.remove('open');
+  completeCollect(job);
+  $('#panel').innerHTML = panelDone(job);
+  later(() => go('home'), 8000);
+}
+const doorEl = id => $(`.door[data-slot="${id}"]`);
+function setHL(id){ $$('.door.hl').forEach(d => d.classList.remove('hl')); doorEl(id)?.classList.add('hl'); }
+
+function wall({ cell = 120, tap = false, open = new Set(), arrowOn = null } = {}){
+  return `<div class="wall" style="--w:${cell}px">${S.slots.map(s => {
+    const b = book(s.book);
+    const led = !b ? '' : s.hold ? 'hold' : 'ok';
+    return `<${tap ? 'button' : 'div'} class="door${open.has(s.id) ? ' open' : ''}" data-slot="${s.id}" ${tap ? `data-a="staff-door" data-id="${s.id}"` : ''} aria-label="Door ${s.id}, ${b ? esc(b.title) : 'empty'}">
+      <div class="cav">${b ? cover(b, Math.round(cell * .62), cell > 140) : ''}</div>
+      <div class="glass"><span class="lbl">${s.id}</span>${s.hold ? `<span class="lk" style="color:var(--ink)">${I.lock(Math.round(cell*.11))}</span>` : ''}<span class="hd"></span><span class="led ${led}"></span></div>
+      ${arrowOn === s.id ? `<span class="arrow" style="color:var(--ink)">${sv('<path d="M12 5v14M5 12l7 7 7-7"/>', 30, 3)}</span>` : ''}
+    </${tap ? 'button' : 'div'}>`;
+  }).join('')}</div>`;
+}
+
+/* ---------- Return ---------- */
+SCREENS.return = () => `${topbar()}
+  <div class="home-body">
+    <section class="collect" style="animation:none">
+      ${viewfinder('Starting camera…', true)}
+      ${demoTray(true)}
+    </section>
+    <div class="side" style="width:400px;gap:26px">
+      <div><h2 class="title">Return a book</h2><p class="sub">Thanks for passing it on.</p></div>
+      ${[['Find the barcode','On the Between Stops sticker on the back cover.'],['Hold it up to the camera',"We'll open an empty door for you."],['Pop it in and tell us how it went','Save your page or leave a review.']].map((s, i) =>
+        `<div style="display:flex;gap:16px;animation:slideR .5s ${i*.08}s both"><span style="width:46px;height:46px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;font-weight:700;font-size:1.4rem;flex-shrink:0">${i+1}</span><div><b style="font-size:1.4rem">${s[0]}</b><p style="color:var(--muted);font-size:1.05rem;margin-top:4px">${s[1]}</p></div></div>`).join('')}
+      <p style="margin-top:auto;padding:18px;border-radius:20px;background:#fff;color:var(--muted);display:flex;gap:10px">${I.tram(22)} Any Between Stops book can go in any library train, not just the one you got it from.</p>
+    </div>
+  </div>`;
+MOUNT.return = () => startCamera(true);
+
+/* Placing the book, then "Did you finish it?" */
+const R = {};
+SCREENS.place = id => {
+  Object.assign(R, { book:id, reader:S.loans[id] || null, slot:doorForReturn()?.id, phase:'placing', stars:0, tags:new Set(), text:'', anon:false, page:'' });
+  return `<div id="place" style="flex:1;display:flex">${placeView()}</div>`;
+};
+MOUNT.place = () => {
+  later(() => { chime([523, 659], .09); doorEl(R.slot)?.classList.add('open'); }, 600);
+};
+function placeView(){
+  const b = book(R.book);
+  if (R.phase === 'placing' || R.phase === 'thanks'){
+    return `<div class="flow">
+      <div class="wall-col">${wall({ cell: 138, arrowOn: R.phase === 'placing' ? R.slot : null })}</div>
+      <div class="panel">${R.phase === 'placing' ? `
+        <div style="display:flex;gap:20px;align-items:center" id="placing-book">${cover(b, 120)}
+          <div><div style="display:flex;align-items:center;gap:6px;color:var(--mint);font-weight:700">${I.check(18)} Found it</div>
+          <div class="serif" style="font-size:1.9rem;line-height:1.1;margin-top:4px">${esc(b.title)}</div><div style="color:rgba(255,255,255,.6)">${esc(b.author)}</div></div></div>
+        <div class="big-h">Pop it into door ${R.slot}</div>
+        <p class="muted-d">The glowing door is open. Slide the book in spine first, then tap below.</p>
+        <button class="btn y press" data-a="placed">It's in, close the door</button>
+        <button class="btn ghost-d sm press" data-a="home">Cancel</button>` : thanksView()}</div></div>`;
+  }
+  const r = rating(b);
+  return `<div class="follow">
+    <div class="book-col">${cover(b, 210)}<h3>${esc(b.title)}</h3><span style="color:rgba(255,255,255,.6)">${esc(b.author)}</span>
+      ${r ? `<span style="display:flex;align-items:center;gap:8px">${stars(r, 15, true)}<b style="color:rgba(255,255,255,.7)">${r.toFixed(1)}</b></span>` : ''}
+      <span class="safe">${I.lock(16)} Safely back in door ${R.slot}</span></div>
+    <div class="panel" style="gap:22px">${R.phase === 'choice' ? choiceView() : R.phase === 'review' ? reviewView() : bookmarkView()}</div>
+  </div>`;
+}
+function choiceView(){
+  const saved = bookmarkFor(R.reader, R.book);
+  return `<div class="hi">${R.reader ? `Thanks, ${esc(R.reader)}!` : 'Thanks for bringing it back!'}</div>
+    <div class="big-h" style="font-size:3rem">Did you finish it?</div>
+    <div class="choices">
+      <button class="choice y" data-a="phase" data-p="review">${I.seal(44)}<b>Finished it</b><span>Rate it and leave a review for the next reader</span></button>
+      <button class="choice" data-a="phase" data-p="bookmark">${I.bookmark(40)}<b>Still reading</b><span>${R.reader ? `Save your page to ${esc(R.reader)}'s account and jump back in next time` : 'Save your page and jump back in next time'}</span></button>
+    </div>
+    ${saved ? `<span class="note-line">${I.bookmarkO()} Last time you saved page ${saved}</span>` : ''}
+    <button class="btn ghost-d sm press" style="width:260px" data-a="thank" data-o="plain">Just return it</button>`;
+}
+const STAR_LABELS = ['Tap to rate','Not for me','It was OK','Good read','Really good','Loved it!'];
+function reviewView(){
+  const who = R.reader || 'Reader';
+  return `<div style="display:flex;justify-content:space-between;align-items:center"><div class="big-h">Rate it</div>
+      <button class="anon press" data-a="anon" id="anon">${R.anon ? I.eyeOff() + ' Posting anonymously' : I.user() + ` Posting as ${esc(who)}`}</button></div>
+    <div class="starpick" id="starpick">${[1,2,3,4,5].map(i => `<button data-a="star" data-n="${i}" class="${i <= R.stars ? 'on' : ''}" style="transition-delay:${i*.04}s" aria-label="${i} star${i>1?'s':''}">${I.star(50)}</button>`).join('')}<span class="lab" id="starlab">${STAR_LABELS[R.stars]}</span></div>
+    <b style="color:rgba(255,255,255,.75);font-size:1.15rem">What stood out?</b>
+    <div class="tags">${TAGS.map(t => `<button class="tag press${R.tags.has(t) ? ' on' : ''}" data-a="tag" data-t="${esc(t)}">${R.tags.has(t) ? I.check(16) : I.plus(16)} ${esc(t)}</button>`).join('')}</div>
+    <textarea class="review" id="rtext" maxlength="240" placeholder="Write a review (optional)">${esc(R.text)}</textarea>
+    <div style="display:flex;gap:14px"><button class="btn ghost-d press" style="width:180px;height:66px" data-a="thank" data-o="plain">Skip</button>
+      <button class="btn y press" style="height:66px" data-a="post-review" id="post" ${R.stars ? '' : 'disabled'}>${I.send()} Post my review</button></div>`;
+}
+function bookmarkView(){
+  const b = book(R.book);
+  return `<div style="display:flex;gap:40px">
+    <div style="flex:1;display:flex;flex-direction:column;gap:18px">
+      <div class="big-h">Which page are you up to?</div>
+      <p class="muted-d" style="font-size:1.15rem">We'll save it to ${R.reader ? esc(R.reader) + "'s" : 'your'} account. Next time you collect this book on any train, we'll take you straight back.</p>
+      <div class="pagebig"><small>Page</small><b id="pnum">–</b><span>of ${b.pages}</span></div>
+      <div class="prog"><i id="pbar"></i></div>
+      <div class="note-line" id="pnote">${I.bulb()} Tip: it's the last page number you read</div>
+      <button class="linkbtn" data-a="phase" data-p="review">${I.seal(20)} Actually, I finished it. Review it</button>
+    </div>
+    <div style="width:330px;display:flex;flex-direction:column;gap:14px">${keypad('page', true)}
+      <button class="btn y press" data-a="save-page" id="psave" style="height:74px" disabled>${I.bookmark(22)} Save my page</button>
+      <button class="press" data-a="phase" data-p="choice" style="color:rgba(255,255,255,.6);font-weight:700;font-size:1.05rem">Back</button></div>
+  </div>`;
+}
+function updatePage(){
+  const b = book(R.book), p = +R.page || 0, ok = p > 0 && p <= b.pages;
+  $('#pnum').textContent = R.page || '–';
+  $('#pnum').classList.toggle('bad', !!R.page && !ok);
+  $('#pbar').style.width = ok ? (p / b.pages * 100) + '%' : '0';
+  $('#psave').disabled = !ok;
+  const n = $('#pnote');
+  n.classList.toggle('bad', !!R.page && !ok);
+  if (R.page && !ok) n.innerHTML = `${I.alert()} This book only has ${b.pages} pages`;
+  else if (ok){ const m = Math.round((b.pages - p) * 1.5); n.innerHTML = `${I.clock(20)} ${Math.round(p / b.pages * 100)}% through, about ${m < 60 ? m + ' min' : Math.round(m/60) + ' hr'} to go`; }
+  else n.innerHTML = `${I.bulb()} Tip: it's the last page number you read`;
+}
+function thanksView(){
+  const b = book(R.book), o = R.outcome;
+  const icon = o.kind === 'reviewed' ? I.star(38) : o.kind === 'saved' ? I.bookmark(36) : I.heart();
+  let body;
+  if (o.kind === 'reviewed') body = `<div class="serif" style="font-size:2.75rem">Thanks for the review!</div>${stars(o.stars, 30, true)}<p class="muted-d">Your ${o.stars} star review is now on ${esc(b.title)} for the next reader to see.</p>`;
+  else if (o.kind === 'saved') body = `<div class="serif" style="font-size:2.75rem">Page ${o.page} saved</div><p class="muted-d">It's on ${R.reader ? esc(R.reader) + "'s" : 'your'} account. Collect ${esc(b.title)} again on any train and we'll take you straight back to page ${o.page}.</p><div class="prog" style="max-width:420px"><i data-w="${Math.round(o.page / b.pages * 100)}"></i></div>`;
+  else body = `<div class="serif" style="font-size:2.75rem">Thanks for passing it on</div><p class="muted-d">${esc(b.title)} is back on the shelf in door ${R.slot}. It has now travelled ${b.km} km.</p>`;
+  return `<span class="circle-ic" style="color:var(--ink)">${icon}</span>${body}
+    <div style="display:flex;gap:18px;align-items:center"><button class="btn y press" data-a="go" data-to="return">Return another</button><button class="btn w press" data-a="home">Done</button>${ring(10, 60, true)}</div>`;
+}
+function setPhase(p){
+  R.phase = p;
+  $('#place').innerHTML = placeView();
+  if (p === 'thanks'){
+    requestAnimationFrame(() => $$('#place .prog i').forEach(i => i.style.width = i.dataset.w + '%'));
+    confetti(.72, .35, 90); chime([659, 784, 1047], .1);
+    later(() => go('home'), 10000);
+  }
+  if (p === 'review') $('#rtext')?.addEventListener('input', e => R.text = e.target.value);
+  if (p === 'bookmark'){ R.page = bookmarkFor(R.reader, R.book) ? String(bookmarkFor(R.reader, R.book)) : ''; updatePage(); }
+}
+function thank(kind, extra = {}){
+  R.outcome = { kind, ...extra };
+  delete S.loans[R.book];
+  setPhase('thanks');
+}
+
+/* ---------- Browse ---------- */
+let genre = 'All';
+SCREENS.browse = () => `${topbar()}
+  <div class="browse-head"><div><h2 class="title">On the shelf</h2><p class="sub">${available()} books ready to borrow right now. Tap one to take a look.</p></div>
+    <button class="btn ink press" style="width:230px;height:64px" data-a="surprise">${I.dice()} Surprise me</button></div>
+  <div class="gchips">${GENRES.map(g => `<button class="gchip press${g === genre ? ' on' : ''}" data-a="genre" data-g="${g}">${g}</button>`).join('')}</div>
+  <div class="grid" id="grid">${gridHtml()}</div>`;
+function gridHtml(){
+  const list = shelfBooks().filter(b => genre === 'All' ? true : genre === 'Short reads' ? b.pages <= 100 : b.genre === genre);
+  if (!list.length) return `<p class="sub" style="grid-column:1/-1;padding:40px">Nothing in ${genre.toLowerCase()} on this shelf right now. Try another one.</p>`;
+  return list.map((b, i) => { const r = rating(b), h = isHeld(b.id); return `<button class="bt press${h ? ' held' : ''}" style="animation-delay:${i*.04}s" data-a="detail" data-id="${b.id}">
+    <div style="position:relative">${h ? `<span class="heldtag">${I.lock(12)} Held</span>` : ''}${cover(b, 170)}</div>
+    <div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div>
+    ${r ? `<div class="r">${stars(r, 12)} (${b.reviews.length})</div>` : ''}</button>`; }).join('');
+}
+function openDetail(id, showQR = false){
+  const b = book(id), s = slotOf(id), held = !!s?.hold, r = rating(b);
+  openOverlay(`<div class="scrim" data-a="close"></div>
+    <div class="sheet" role="dialog" aria-label="${esc(b.title)}">
+      <div class="left">${cover(b, 240)}${s ? `<span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:700">${I.door()} Behind door ${s.id}</span>` : ''}</div>
+      <div class="mid">
+        <h2 class="serif" style="font-size:2.5rem;line-height:1.1">${esc(b.title)}</h2>
+        <div style="font-size:1.25rem;color:var(--muted)">${esc(b.author)}</div>
+        ${r ? `<div style="display:flex;align-items:center;gap:10px">${stars(r, 20)}<b style="font-size:1.25rem">${r.toFixed(1)}</b><span style="color:var(--muted)">from ${b.reviews.length} reader${b.reviews.length === 1 ? '' : 's'}</span></div>` : ''}
+        <div class="pills"><span class="pill">${b.genre}</span><span class="pill">${b.pages} pages</span><span class="pill">About ${readTime(b.pages)} read</span><span class="pill h">${b.km} km travelled</span></div>
+        <p class="blurb">${esc(b.blurb)}</p>
+        ${b.note ? `<div class="lastnote"><small>Left by the last reader</small><p>“${esc(b.note.text)}”</p><small style="font-weight:400">${esc(b.note.by)}</small></div>` : ''}
+        ${b.reviews.length ? `<b style="font-size:1.25rem;margin-top:6px">Reviews</b>${b.reviews.slice(0,3).map(rv => `<div class="rcard"><div class="rh">${stars(rv.stars, 14)}<span>${esc(rv.by)} · ${esc(rv.when)}</span></div>${rv.text ? `<p>${esc(rv.text)}</p>` : ''}${rv.tags?.length ? `<div class="tags">${rv.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}</div>`).join('')}` : ''}
+        <b style="font-size:1.25rem;margin-top:6px">Where it's been</b>
+        <ul class="tl">${b.trips.slice(0,4).map(t => `<li><b>${esc(t[0])}</b><span>${esc(t[1])}</span></li>`).join('')}</ul>
+      </div>
+      <div class="right">
+        ${held ? `<div class="heldbox">${I.lock(30)}<b>Held for another reader</b><span>If they don't collect it in 30 minutes it goes back on the shelf.</span></div>`
+               : `<button class="btn y press" style="height:80px" data-a="borrow" data-id="${b.id}">${I.unlock()} Borrow now</button><p style="text-align:center;color:var(--muted);font-size:.95rem">Free, no card needed. Leave it on any library train when you're done.</p>`}
+        <button class="btn ghost sm press" data-a="appqr" data-id="${b.id}">${I.phone()} ${showQR ? 'Hide' : 'Get the app'}</button>
+        ${showQR ? `<div class="appqr">${qrSvg(PHONE_APP)}<p style="margin-top:8px">Scan to reserve books for your next trip</p></div>` : ''}
+        <button class="btn ink sm press" style="margin-top:auto" data-a="close">Close</button>
+      </div>
+    </div>`);
+}
+async function surprise(){
+  const pool = shelfBooks().filter(b => !isHeld(b.id));
+  if (!pool.length) return;
+  openOverlay(`<div class="reel"><h3 id="reel-h">Picking something for you…</h3><div class="win" id="win"></div>
+    <div class="acts" id="reel-acts"><button class="btn ghost-d sm press" data-a="surprise">Spin again</button><button class="btn y sm press" data-a="reel-look">Take a look</button></div>
+    <button class="press" data-a="close" style="color:rgba(255,255,255,.6);font-weight:700;font-size:1.15rem">Close</button></div>`);
+  const my = ++surprise.n;
+  let idx = Math.random() * pool.length | 0;
+  const n = 14 + (Math.random() * 10 | 0);
+  for (let i = 0; i < n; i++){
+    if (my !== surprise.n || !$('#win')) return;
+    idx = (idx + 1) % pool.length;
+    $('#win').innerHTML = cover(pool[idx], 220);
+    chime([440 + i * 20], .03);
+    touch();
+    await sleep(60 + (i * i / 2 | 0) * 3);
+  }
+  if (my !== surprise.n || !$('#win')) return;
+  $('#win').classList.add('landed');
+  $('#reel-h').textContent = 'How about this one?';
+  $('#reel-acts').classList.add('on');
+  surprise.pick = pool[idx].id;
+  confetti(.5, .45, 70); chime([784, 1047], .1);
+}
+surprise.n = 0;
+
+/* ---------- Help ---------- */
+SCREENS.help = () => `${topbar()}
+  <div class="help">
+    <div><h2 class="title">How it works</h2><p class="sub">A free library that lives on the train. Take a book, leave a book.</p></div>
+    <div class="steps">${[
+      [I.phone(36), 'Reserve in the app', 'Find a library train and hold a book for 30 minutes.', 'var(--blue)', '#fff'],
+      [I.qr(36), 'Scan it here', 'Hold your QR code up to the camera, or type your code.', 'var(--yellow)', 'var(--ink)'],
+      [I.book(36), 'Take it, read it', 'Your door pops open. Keep it as long as you like.', '#1F7A6B', '#fff'],
+      [I.ret(36), 'Leave it anywhere', 'Return it to any kiosk. Save your page or leave a review.', 'var(--t1)', 'var(--ink)'],
+    ].map((s, i) => `<div class="step" style="animation-delay:${i*.1}s"><div class="row"><span class="ic" style="background:${s[3]};color:${s[4]};animation-delay:${i*.6}s">${s[0]}</span><span class="n">${i+1}</span></div><b>${s[1]}</b><span>${s[2]}</span></div>`).join('')}</div>
+    <div class="hcards">
+      <div class="hcard"><h4>Make it easier</h4>
+        <button class="toggle-row" data-a="textsize"><span>Larger text</span><span class="switch${document.documentElement.classList.contains('big') ? ' on' : ''}"></span></button>
+        <p style="color:var(--muted)">You can also tap Aa at the top of any screen. Everything is reachable from a seat.</p></div>
+      <div class="hcard light"><h4>Need a hand?</h4>
+        <button class="btn y sm press" data-a="guard" id="guard">${I.bell()} Call the guard</button>
+        <b style="color:var(--muted)">Report a problem</b>
+        <div class="tags">${['A door is stuck','Book is damaged',"Scanner won't read",'Shelf is empty'].map(p => `<button class="tag press" data-a="report">${I.alert(16)} ${p}</button>`).join('')}</div></div>
+      <div class="hcard" style="flex:0 0 250px;align-items:center;text-align:center"><div style="width:150px">${qrSvg(PHONE_APP)}</div><b>Get the Between Stops app</b><span style="color:var(--muted);font-size:.9rem">Plan a trip and reserve a book before you board.</span></div>
+    </div>
+    <p style="color:var(--muted)">Good to know: books are free, there are no late fees, and kids are welcome to borrow. Please keep food away from the shelf.</p>
+  </div>`;
+
+/* ---------- Staff (long-press the logo for 2 seconds, PIN 2468) ---------- */
+let pin = '';
+SCREENS.staff = () => { pin = ''; return `${topbar()}<div id="staff" style="flex:1;display:flex;flex-direction:column">${gateView()}</div>`; };
+function gateView(){
+  return `<div class="gate"><span class="badge" style="color:var(--ink)">${I.key()}</span><h2 class="title">Crew access</h2>
+    <div class="dots" id="dots">${[0,1,2,3].map(i => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join('')}</div>
+    ${keypad('pin').replace('<div class="pad">', '<div class="pad" style="grid-template-columns:repeat(3,96px)">')}
+    <p style="color:var(--muted)">Demo PIN is 2468</p></div>`;
+}
+function dashView(){
+  const holds = S.reservations.filter(r => !r.collected && r.exp > Date.now()).length;
+  const pass = new URL('pass/', location.href).href;
+  return `<div class="dash-body">
+    <div class="wall-side"><h3 style="font-size:1.5rem">Shelf status</h3><p style="color:var(--muted)">Tap a door to open or close it.</p>
+      ${wall({ cell: 112, tap: true, open: S.openDoors })}
+      <div class="legend"><span><i style="background:var(--mint)"></i>Ready</span><span><i style="background:var(--t1)"></i>Held</span><span><i style="background:var(--line)"></i>Empty</span><span><i style="background:var(--yellow)"></i>Open</span></div></div>
+    <div class="dash-right">
+      <div class="metrics">
+        <div class="metric"><b>${shelfBooks().length}/${S.slots.length}</b><span>doors filled</span></div>
+        <div class="metric"><b>${holds}</b><span>active holds</span></div>
+        <div class="metric"><b>${S.borrowed}</b><span>out today</span></div>
+        <div class="metric"><b>${Object.values(S.bookmarks).reduce((a, m) => a + Object.keys(m).length, 0)}</b><span>saved pages</span></div>
+        <div class="metric"><b>${S.books.reduce((a, b) => a + b.reviews.length, 0)}</b><span>reviews</span></div>
+        <div class="metric"><b>Online</b><span>connection</span></div>
+      </div>
+      <button class="metric toggle-row" data-a="demo-toggle"><span>Show demo passes on scan screens</span><span class="switch${S.showDemo ? ' on' : ''}"></span></button>
+      <div style="display:flex;gap:12px"><button class="btn ink sm press" data-a="doors" data-v="open">Open all</button><button class="btn ghost sm press" data-a="doors" data-v="close">Close all</button><button class="btn red sm press" data-a="reset">Reset demo</button></div>
+      <button class="btn w sm press" data-a="fullscreen">${I.fs()} Full screen kiosk mode</button>
+      <h3 style="font-size:1.4rem;margin-top:6px">Test passes</h3>
+      <p style="color:var(--muted)">Show these on another screen and hold them up to the kiosk camera. Make your own at <b>${esc(pass)}</b></p>
+      <div class="qrgrid">${[...DEMO_PASSES, ...DEMO_RETURNS.map(r => ({ ...r, detail:'Return' }))].map(p => `<div class="qrbox">${qrSvg(p.payload)}<b>${esc(p.label)}</b><span>${esc(p.detail)}</span></div>`).join('')}</div>
+      <button class="btn y press" data-a="home">Exit crew mode</button>
+    </div></div>`;
+}
+
+/* ============================================================
+   LOGIC: scanning, collecting, returning
+   ============================================================ */
+function parse(raw){
+  const s = String(raw).trim();
+  if (/^betweenstops:\/\//i.test(s)){
+    const u = new URL(s.replace(/^betweenstops:\/\//i, 'https://x/'));
+    const kind = u.pathname.replace(/\//g, '').toLowerCase();
+    const q = Object.fromEntries(u.searchParams);
+    if (kind === 'collect') return { type:'collect', code:q.code, book:q.book, name:q.name || null, exp:q.exp ? +q.exp * 1000 : null };
+    if (kind === 'return' && q.book) return { type:'return', book:q.book };
+    return null;
+  }
+  const b = S.books.find(b => b.barcode === s);
+  if (b) return { type:'return', book:b.id };
+  const d = s.replace(/[\s-]/g, '');
+  if (/^\d{6}$/.test(d)) return { type:'collect', code:d };
+  if (/^\d{4}$/.test(d)) return { type:'quick', pin:d };
+  return null;
+}
+function showAlert(icon, title, msg, bookId){
+  S.alert = true;
+  const b = bookId && book(bookId);
+  openOverlay(`<div class="alert" data-a="close-alert"><div class="card" data-a="noop">${b ? cover(b, 170) : ''}
+    <div><span class="ic">${icon}</span><h3>${esc(title)}</h3><p>${esc(msg)}</p>
+    <div class="acts"><button class="btn y sm press" style="width:220px" data-a="close-alert">Try again</button>${b && S.route !== 'browse' ? `<button class="btn ghost sm press" style="width:240px" data-a="go" data-to="browse">Browse the shelf</button>` : ''}</div></div></div></div>`);
+  chime([330, 262], .12);
+}
+function handleScan(raw, returning = false){
+  touch();
+  const p = parse(raw);
+  if (!p) return showAlert(I.qr(34), "That code isn't one of ours", 'Open the Between Stops app, tap your reservation and hold the QR code up to the camera.');
+  if (p.type === 'return') return startReturn(p.book);
+  if (returning) return showAlert(I.ret(34), "That's a reservation pass", 'To return a book, scan the code on its back cover. To collect, go back and scan your pass on the main screen.');
+  if (p.type === 'quick') return collectQuick(p.pin);
+  collect(p);
+}
+function collectQuick(code){
+  const r = S.reservations.find(r => r.pin === code);
+  if (r) return collect({ code:r.code, book:r.book, name:r.name });
+  const b = S.books.find(b => b.num === +code.slice(0, 2));
+  if (!b) return showAlert(I.grid(34), "We couldn't find that quick code", 'Check the 4 digit quick code under your QR in the app. Codes last 30 minutes.');
+  collect({ book:b.id });
+}
+function collect({ code, book:bookId, name, exp }){
+  if (exp && exp < Date.now()) return expired(bookId);
+  const r = code && S.reservations.find(r => r.code === code);
+  if (r){
+    if (r.collected) return showAlert(I.check(34), 'Already collected', `${book(r.book)?.title || 'This book'} was collected with this pass earlier. Enjoy the read!`, r.book);
+    if (r.exp < Date.now()) return expired(r.book);
+    const s = slotOf(r.book);
+    if (!s) return notHere(r.book);
+    return go('unlock', { book:r.book, slot:s.id, name:r.name, code:r.code });
+  }
+  if (!bookId || !book(bookId)) return showAlert(I.grid(34), "We couldn't find that code", 'Check the six digit code in the app and try again. Codes are only valid for 30 minutes.');
+  const s = slotOf(bookId);
+  if (!s) return notHere(bookId);
+  if (s.hold && s.hold !== code) return showAlert(I.lock(34), 'Someone else has this one', `${book(bookId).title} is held for another reader. Browse the shelf for something else to read.`, bookId);
+  if (code) S.reservations.push({ code, book:bookId, name:name || 'Reader', exp: Date.now() + 30*60e3 });
+  go('unlock', { book:bookId, slot:s.id, name:name || null, code:code || null });
+}
+const expired = id => showAlert(I.clock(34), 'This reservation has expired', 'Holds last 30 minutes. If the book is still on the shelf you can borrow it straight away from Browse.', id);
+const notHere = id => showAlert(I.tram(34), 'Wrong train', `${book(id)?.title || 'That book'} is riding a different train right now. Check the app for the train and car it's on.`, id);
+
+function completeCollect(job){
+  const s = S.slots.find(s => s.id === job.slot);
+  s.book = null; s.hold = null;
+  const r = job.code && S.reservations.find(r => r.code === job.code);
+  if (r) r.collected = true;
+  S.loans[job.book] = job.name || 'Reader';
+  book(job.book).trips.unshift([`Collected from car ${CAR} at ${station(S.nextStop - 1)}${job.name ? ' by ' + job.name : ''}`, 'Just now']);
+  S.borrowed++;
+}
+function startReturn(id){
+  if (!book(id)) return showAlert(I.book(34), "We don't know that book", 'Only books with a Between Stops sticker can go in the kiosk.');
+  if (slotOf(id)) return showAlert(I.book(34), 'That book is already on the shelf', "Looks like it's already in one of our doors. Try scanning a different book.", id);
+  if (!doorForReturn()) return showAlert(I.door(34), 'This shelf is full', 'Every door is in use. Car 5 has a library too, or keep it for your next trip.');
+  go('place', id);
+}
+function doorForReturn(){
+  const rank = s => s.id[0] === 'B' ? 0 : s.id[0] === 'A' ? 1 : 2;
+  return S.slots.filter(s => !s.book).sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id))[0];
+}
+function bookmarkFor(reader, id){ return reader ? S.bookmarks[reader]?.[id] : undefined; }
+
+/* ============================================================
+   ACTIONS (all taps go through here)
+   ============================================================ */
+const ACTIONS = {
+  noop(){},
+  start(){ go('home'); },
+  home(){ go('home'); },
+  go(d){ go(d.to); },
+  close(){ closeOverlay(); surprise.n++; },
+  'close-alert'(d, el, e){ if (e.target.closest('[data-a]') !== el) return; S.alert = null; closeOverlay(); },
+  textsize(){
+    document.documentElement.classList.toggle('big');
+    const on = document.documentElement.classList.contains('big');
+    $$('[data-a="textsize"]').forEach(b => { b.classList.toggle('on', on); $('.switch', b)?.classList.toggle('on', on); });
+    toast(on ? 'Larger text on' : 'Larger text off');
+  },
+  scan(d){ handleScan(d.code, !!d.ret); },
+  async paste(d){
+    try { const t = await navigator.clipboard.readText(); if (t) return handleScan(t, !!d.ret); } catch {}
+    toast('Copy a pass link from the pass maker first');
+  },
+  key(d){
+    if (d.t === 'code'){
+      const n = C.quick ? 4 : 6;
+      C.digits = d.k === 'del' ? C.digits.slice(0, -1) : d.k === 'clear' ? '' : (C.digits.length < n ? C.digits + d.k : C.digits);
+      $('#code-left').innerHTML = codeLeft();
+      const btn = $('#code-go'); btn.disabled = C.digits.length < n; btn.textContent = C.quick ? 'Unlock with quick code' : 'Unlock my book';
+    } else if (d.t === 'page'){
+      R.page = d.k === 'del' ? R.page.slice(0, -1) : d.k === 'clear' ? '' : (R.page.length < 4 ? (R.page + d.k).replace(/^0+/, '') : R.page);
+      updatePage();
+    } else if (d.t === 'pin'){
+      if (d.k === 'del') pin = pin.slice(0, -1); else if (d.k === 'clear') pin = ''; else if (pin.length < 4) pin += d.k;
+      $$('#dots i').forEach((dot, i) => dot.classList.toggle('on', i < pin.length));
+      if (pin.length === 4){
+        if (pin === '2468') { $('#staff').innerHTML = dashView(); chime([523, 784], .08); }
+        else { const dots = $('#dots'); dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); setTimeout(() => { pin = ''; $$('#dots i').forEach(i => i.classList.remove('on')); }, 450); }
+      }
+    }
+  },
+  'code-mode'(d){ C.quick = !!d.q; C.digits = ''; $('#code-left').innerHTML = codeLeft(); const b = $('#code-go'); b.disabled = true; b.textContent = C.quick ? 'Unlock with quick code' : 'Unlock my book'; },
+  'code-go'(){
+    const known = C.quick ? S.reservations.some(r => r.pin === C.digits) || S.books.some(b => b.num === +C.digits.slice(0, 2)) : S.reservations.some(r => r.code === C.digits);
+    const digits = C.digits;
+    if (!known){ const bx = $('#boxes'); bx.classList.remove('shake'); void bx.offsetWidth; bx.classList.add('shake'); C.digits = ''; setTimeout(() => { if (S.route === 'code') $('#code-left').innerHTML = codeLeft(); }, 460); }
+    handleScan(digits);
+  },
+  'got-it'(){ finishCollect(S.job); },
+  placed(){
+    const pb = $('#placing-book .cover');
+    if (pb){ pb.style.transition = 'all .45s ease-in'; pb.style.transform = 'translateX(-260px) scale(.4)'; pb.style.opacity = '0'; }
+    const my = runId;
+    setTimeout(() => {
+      if (my !== runId) return;
+      const s = S.slots.find(s => s.id === R.slot); s.book = R.book; s.hold = null;
+      const b = book(R.book); b.trips.unshift([`Returned to car ${CAR} at ${station(S.nextStop - 1)}`, 'Just now']); b.km += 8 + (Math.random() * 18 | 0);
+      S.returned++; S.km += 14;
+      const door = doorEl(R.slot);
+      $('.arrow', door)?.remove();
+      $('.cav', door).innerHTML = cover(b, Math.round(138 * .62), false);
+      $('.led', door).className = 'led ok';
+      setTimeout(() => { door.classList.remove('open'); chime([392, 330], .08); }, 250);
+      setTimeout(() => { if (my === runId) setPhase('choice'); }, 1300);
+    }, 450);
+  },
+  phase(d){ setPhase(d.p); },
+  thank(d){ thank(d.o); },
+  star(d){
+    R.stars = +d.n;
+    $$('#starpick button').forEach((b, i) => b.classList.toggle('on', i < R.stars));
+    $('#starlab').textContent = STAR_LABELS[R.stars];
+    $('#post').disabled = false;
+    chime([500 + R.stars * 80], .05);
+  },
+  tag(d, el){
+    R.tags.has(d.t) ? R.tags.delete(d.t) : R.tags.add(d.t);
+    el.classList.toggle('on', R.tags.has(d.t));
+    el.innerHTML = `${R.tags.has(d.t) ? I.check(16) : I.plus(16)} ${esc(d.t)}`;
+  },
+  anon(){ R.anon = !R.anon; $('#anon').innerHTML = R.anon ? I.eyeOff() + ' Posting anonymously' : I.user() + ` Posting as ${esc(R.reader || 'Reader')}`; },
+  'post-review'(){
+    if (!R.stars) return;
+    const b = book(R.book), text = R.text.trim(), by = R.anon ? `A reader at ${station(S.nextStop - 1)}` : (R.reader || 'Reader');
+    b.reviews.unshift({ stars:R.stars, text, tags:TAGS.filter(t => R.tags.has(t)), by, when:'Just now' });
+    const noteText = text || [...R.tags][0];
+    if (noteText) b.note = { text:noteText, by };
+    if (R.reader && S.bookmarks[R.reader]) delete S.bookmarks[R.reader][R.book];
+    persist();
+    thank('reviewed', { stars:R.stars });
+  },
+  'save-page'(){
+    const p = +R.page, b = book(R.book);
+    if (!(p > 0 && p <= b.pages)) return;
+    const who = R.reader || 'Reader';
+    (S.bookmarks[who] ||= {})[R.book] = p;
+    persist();
+    thank('saved', { page:p });
+  },
+  genre(d){ genre = d.g; $$('.gchip').forEach(c => c.classList.toggle('on', c.dataset.g === genre)); $('#grid').innerHTML = gridHtml(); },
+  detail(d){ openDetail(d.id); },
+  appqr(d){ openDetail(d.id, !$('.appqr')); },
+  borrow(d){ const s = slotOf(d.id); if (s && !s.hold) go('unlock', { book:d.id, slot:s.id, name:null, code:null }); },
+  surprise(){ surprise(); },
+  'reel-look'(){ const id = surprise.pick; surprise.n++; closeOverlay(); openDetail(id); },
+  guard(d, el){ el.innerHTML = `${I.check()} Help is on the way`; el.classList.replace('y', 'ink'); toast('The train guard has been notified'); },
+  report(d, el){ $$('[data-a="report"]').forEach(b => b.classList.remove('on')); el.classList.add('on'); toast("Thanks, we've let the crew know"); },
+  'staff-door'(d){ S.openDoors.has(d.id) ? S.openDoors.delete(d.id) : S.openDoors.add(d.id); doorEl(d.id).classList.toggle('open', S.openDoors.has(d.id)); },
+  doors(d){ S.slots.forEach(s => d.v === 'open' ? S.openDoors.add(s.id) : S.openDoors.delete(s.id)); $$('.door').forEach(e => e.classList.toggle('open', d.v === 'open')); },
+  'demo-toggle'(d, el){ S.showDemo = !S.showDemo; $('.switch', el).classList.toggle('on', S.showDemo); },
+  reset(){ try { localStorage.removeItem('bs-kiosk-account'); } catch {} freshState(); S.route = 'staff'; $('#staff').innerHTML = dashView(); toast('Shelf restocked and demo data reset'); },
+  fullscreen(){ const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); },
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-a]');
+  if (!el) return;
+  const fn = ACTIONS[el.dataset.a];
+  if (fn) fn(el.dataset, el, e);
+});
+
+/* Long press on the logo opens crew mode */
+let holdTimer;
+document.addEventListener('pointerdown', e => {
+  touch();
+  if (!actx) chime([0.0001], .001);  // unlock audio on first touch
+  const h = e.target.closest('[data-hold]');
+  if (h){ holdTimer = setTimeout(() => go(h.dataset.hold), 2000); }
+});
+['pointerup','pointercancel','pointerleave'].forEach(t => document.addEventListener(t, () => clearTimeout(holdTimer)));
+document.addEventListener('keydown', e => { touch(); if (e.key === 'Escape'){ closeOverlay(); S.alert = null; } });
+document.addEventListener('input', touch);
+
+/* ---------- Global ticks: journey, countdowns, idle ---------- */
+setInterval(() => {
+  updateJourney();
+  $$('[data-until]').forEach(el => el.textContent = Math.max(0, Math.ceil((+el.dataset.until - Date.now()) / 1000)));
+}, 250);
+setInterval(() => {
+  const idle = (Date.now() - S.lastTouch) / 1000;
+  if (S.route === 'attract' || S.route === 'unlock') return;
+  if (S.route === 'home'){ if (idle > 90) go('attract'); return; }
+  const limit = S.route === 'staff' ? 120 : 45;
+  if (idle > limit + 12) return go('home');
+  if (idle > limit && !S.still){
+    S.still = true;
+    $('#stage').insertAdjacentHTML('beforeend', `<div class="still" data-a="noop"><div class="card">${ring(12, 110)}<h2 class="title">Still there?</h2><p class="sub">We'll head back to the start screen soon.</p><button class="btn y press" style="width:320px" data-a="noop">I'm still here</button></div></div>`);
+  }
+}, 1000);
+
+/* ---------- Fit the 1280x860 kiosk screen to any window ---------- */
+function fit(){
+  const s = Math.min(innerWidth / 1280, innerHeight / 860);
+  $('#stage').style.transform = `translate(-50%,-50%) scale(${s})`;
+}
+addEventListener('resize', fit);
+fit();
+go('attract');
+</script>
+</body>
+</html>

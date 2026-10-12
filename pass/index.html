@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F4F6F9">
+<title>Between Stops Pass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{
+  --ink:#182033; --yellow:#FFC72C; --blue:#2D5BA8; --grey:#E9ECF1; --bg:#F4F6F9;
+  --white:#FFFFFF; --muted:#5E6779; --line:#D7DCE4; --green:#2E7D5B;
+  --sans:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Newsreader", Georgia, serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.wrap{max-width:440px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 40px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.mark{width:44px;height:44px;border-radius:13px;background:var(--ink);display:grid;place-items:center;flex-shrink:0}
+header h1{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1}
+header p{font-size:14px;color:var(--muted);margin-top:3px}
+.seg{display:flex;padding:4px;border-radius:14px;background:var(--grey);margin-bottom:18px}
+.seg button{flex:1;height:40px;border-radius:10px;font-weight:700;font-size:15px;color:var(--muted)}
+.seg button.on{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(24,32,51,.12)}
+h2{font-size:19px;margin:22px 0 4px}
+.sub{font-size:14px;color:var(--muted);line-height:1.4}
+label.name{display:flex;align-items:center;gap:10px;margin-top:10px;padding:0 14px;height:50px;border-radius:14px;background:var(--white);border:1px solid var(--line)}
+label.name input{flex:1;border:0;background:none;font-size:16px;outline:none;height:100%}
+.list{margin-top:12px;background:var(--white);border-radius:20px;overflow:hidden}
+.row{display:flex;gap:14px;align-items:center;width:100%;text-align:left;padding:12px 14px;border:2px solid transparent;border-radius:0}
+.row + .row{border-top:1px solid var(--grey)}
+.row.on{background:#FFF7DD}
+.row .t{font-weight:700;font-size:16px;line-height:1.25}
+.row .a{font-size:14px;color:var(--muted);margin-top:2px}
+.row .tag{margin-left:auto;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:var(--grey);white-space:nowrap}
+.row .tag.go{background:var(--yellow)}
+.cov{width:40px;height:58px;border-radius:3px 6px 6px 3px;flex-shrink:0;position:relative;overflow:hidden;box-shadow:inset 3px 0 0 rgba(0,0,0,.18),0 3px 8px rgba(24,32,51,.18)}
+.cov::after{content:"";position:absolute;left:22%;top:18%;width:50%;aspect-ratio:1;border-radius:50%;background:var(--c2);opacity:.9}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;border-radius:16px;background:var(--yellow);color:var(--ink);font-weight:700;font-size:17px;margin-top:18px;box-shadow:0 8px 18px rgba(224,168,0,.3);transition:transform .15s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:var(--white);border:1px solid var(--line);box-shadow:none}
+.btn[disabled]{opacity:.45;box-shadow:none}
+
+/* Pass */
+.pass{position:relative;margin-top:6px;border-radius:28px;background:var(--ink);color:var(--white);padding:20px;overflow:hidden;animation:pop .45s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes pop{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+.pass .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pass small{font-size:13px;color:rgba(255,255,255,.6)}
+.pass .title{font-family:var(--serif);font-weight:600;font-size:24px;line-height:1.15;margin-top:2px}
+.pill{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#F28C1E;color:var(--ink);font-weight:700;font-size:16px;flex-shrink:0}
+.qr{margin:18px auto 0;background:var(--white);border-radius:22px;padding:16px;width:100%;max-width:300px;aspect-ratio:1;display:grid;place-items:center;position:relative}
+.qr svg{width:100%;height:100%;display:block}
+.qr .scan{position:absolute;left:12px;right:12px;height:3px;border-radius:2px;background:var(--yellow);box-shadow:0 0 12px var(--yellow);animation:scan 2.4s ease-in-out infinite;opacity:.85}
+@keyframes scan{0%,100%{top:14px}50%{top:calc(100% - 17px)}}
+.code{text-align:center;font-size:34px;font-weight:700;letter-spacing:.12em;margin-top:14px;font-variant-numeric:tabular-nums}
+.quick{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.08)}
+.quick small{display:block}
+.quick b{font-size:28px;letter-spacing:.2em;color:var(--yellow);font-variant-numeric:tabular-nums}
+.meta{display:flex;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.2);font-size:14px}
+.meta b{display:block;font-size:16px;margin-top:2px}
+.meta .timer{color:var(--yellow)}
+.tip{display:flex;gap:10px;align-items:center;margin-top:14px;padding:12px 14px;border-radius:16px;background:#FFF1C7;font-size:14px;line-height:1.4}
+.expired .timer{color:#FFB4A6}
+.expired .qr{opacity:.35}
+.small-qr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.small-qr div{background:var(--white);border-radius:18px;padding:12px;text-align:center}
+.small-qr svg{width:100%;height:auto;display:block}
+.small-qr b{display:block;font-size:14px;margin-top:6px}
+.small-qr span{font-size:12px;color:var(--muted)}
+.foot{font-size:13px;color:var(--muted);text-align:center;margin-top:26px;line-height:1.5}
+.hide{display:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 30 30"><rect x="4" y="5" width="6" height="20" rx="1.5" fill="#FFC72C"/><rect x="12" y="8" width="6" height="17" rx="1.5" fill="#fff"/><rect x="20" y="4" width="6" height="21" rx="1.5" fill="#2D5BA8"/></svg></div>
+    <div><h1>Between Stops</h1><p>Pass maker for the library kiosk</p></div>
+  </header>
+
+  <div class="seg" role="tablist">
+    <button class="on" data-tab="collect" role="tab">Collect a book</button>
+    <button data-tab="return" role="tab">Return a book</button>
+  </div>
+
+  <!-- Collect -->
+  <section id="collect">
+    <div id="picker">
+      <h2>Who's collecting?</h2>
+      <label class="name"><span aria-hidden="true">👋</span><input id="name" value="Alex" maxlength="20" autocomplete="off" aria-label="Your name"></label>
+
+      <h2>Reserve a book</h2>
+      <p class="sub">These are on the shelf in car 2 of the T1. Pick one and we'll hold it for 30 minutes.</p>
+      <div class="list" id="books"></div>
+      <button class="btn" id="make" disabled>Reserve and make my pass</button>
+
+      <h2>Ready-made demo passes</h2>
+      <p class="sub">Each one tests a different thing the kiosk can say.</p>
+      <div class="small-qr" id="demos"></div>
+    </div>
+
+    <div id="passView" class="hide">
+      <div class="pass" id="pass"></div>
+      <div class="tip"><span aria-hidden="true">☀️</span><span>Turn your screen brightness up and hold your phone about 15 cm from the kiosk camera.</span></div>
+      <button class="btn ghost" id="again">Reserve a different book</button>
+    </div>
+  </section>
+
+  <!-- Return -->
+  <section id="return" class="hide">
+    <h2>Book barcodes</h2>
+    <p class="sub">Every Between Stops book has a sticker on the back. Show one of these to the kiosk on the Return screen and a door will open for it.</p>
+    <div class="small-qr" id="returns"></div>
+  </section>
+
+  <p class="foot">Prototype for the Between Stops kiosk.<br>Passes work offline once this page has loaded.</p>
+</div>
+
+<script>
+/* Must match Catalog in the kiosk app. */
+const SHELF = [
+  { id:'signal', num:13,   title:'Signal Failure',              author:'Dana Whitlock', c1:'#C2402A', c2:'#FFF4E8' },
+  { id:'pip', num:14,      title:'Pip and the Night Train',     author:'Hana Lowe',     c1:'#FFC72C', c2:'#182033' },
+  { id:'kettle', num:15,   title:'Everything the Kettle Knows', author:'Rosa Mendes',   c1:'#E8B4BC', c2:'#5A2333' },
+  { id:'birds', num:16,    title:'A Field Guide to City Birds', author:'Tom Ashby',     c1:'#7FA650', c2:'#FFFFFF' },
+  { id:'katoomba', num:17, title:'Last Stop, Katoomba',         author:'Ellie Brandt',  c1:'#3B2F6B', c2:'#FFC72C' },
+  { id:'quiet', num:18,    title:'The Quiet Carriage',          author:'Marcus Lee',    c1:'#182033', c2:'#E9ECF1' },
+  { id:'bread', num:19,    title:'Bread, Mostly',               author:'Lena Fischer',  c1:'#D9A441', c2:'#3A2A12' },
+  { id:'redfern', num:11,  title:'The Long Way to Redfern',     author:'Mae Okafor',    c1:'#2D5BA8', c2:'#FFC72C', held:true },
+  { id:'tides', num:12,    title:'Small Tides',                 author:'Jun Park',      c1:'#1F7A6B', c2:'#F5E6C8', held:true },
+];
+const DEMOS = [
+  { label:"Alex's pass", detail:'Valid reservation', payload:'betweenstops://collect?code=482913&book=redfern&name=Alex' },
+  { label:"Sam's pass",  detail:'Valid reservation', payload:'betweenstops://collect?code=105277&book=tides&name=Sam' },
+  { label:"Jess's pass", detail:'Expired',           payload:'betweenstops://collect?code=660021&book=signal&name=Jess' },
+  { label:"Kim's pass",  detail:'Wrong train',       payload:'betweenstops://collect?code=777314&book=fig&name=Kim' },
+];
+const RETURNS = [
+  { label:'Salt and Static',   detail:'Not on a shelf yet', payload:'betweenstops://return?book=salt' },
+  { label:'Orchard Hours',     detail:'Out with Alex',      payload:'betweenstops://return?book=orchard' },
+  { label:'How to Fold a Map', detail:'Out with Priya',     payload:'betweenstops://return?book=map' },
+  { label:'The Fig Tree Club', detail:'From another train', payload:'betweenstops://return?book=fig' },
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k){ try { localStorage.removeItem(k); } catch {} },
+};
+
+function qrSvg(text, cell = 6){
+  if (typeof qrcode !== 'function') return '<p class="sub">QR library didn\'t load. Check your connection.</p>';
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  return q.createSvgTag({ cellSize: cell, margin: 0, scalable: true });
+}
+
+/* Book list */
+let picked = null;
+function renderBooks(){
+  $('#books').innerHTML = SHELF.map(b => `
+    <button class="row${picked===b.id?' on':''}" data-id="${b.id}" ${b.held?'aria-disabled="true"':''}>
+      <span class="cov" style="background:${b.c1};--c2:${b.c2}"></span>
+      <span><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div></span>
+      <span class="tag${picked===b.id?' go':''}">${b.held ? 'Held' : picked===b.id ? 'Picked' : 'On shelf'}</span>
+    </button>`).join('');
+  $('#make').disabled = !picked;
+}
+$('#books').addEventListener('click', e => {
+  const r = e.target.closest('.row'); if (!r) return;
+  const b = SHELF.find(x => x.id === r.dataset.id);
+  if (b.held) { alert(`${b.title} is already held for someone else. Use their demo pass below, or pick another book.`); return; }
+  picked = b.id; renderBooks();
+});
+
+/* Pass */
+let timer;
+function showPass(p){
+  const b = SHELF.find(x => x.id === p.book);
+  const payload = `betweenstops://collect?code=${p.code}&book=${p.book}&name=${encodeURIComponent(p.name)}&exp=${Math.floor(p.exp/1000)}&pin=${p.pin}`;
+  $('#pass').innerHTML = `
+    <div class="top">
+      <div><small>Held for ${esc(p.name)}</small><div class="title">${esc(b.title)}</div><small>${esc(b.author)}</small></div>
+      <span class="pill">T1</span>
+    </div>
+    <div class="qr">${qrSvg(payload)}<span class="scan"></span></div>
+    <div class="code">${p.code.slice(0,3)} ${p.code.slice(3)}</div>
+    <div class="quick"><span><small>Quick code</small><small>Type this on the kiosk if the QR won't scan</small></span><b>${p.pin}</b></div>
+    <div class="meta">
+      <span><small>Where</small><b>Car 2 kiosk</b></span>
+      <span style="text-align:right"><small>Held for</small><b class="timer" id="timer"></b></span>
+    </div>`;
+  $('#picker').classList.add('hide');
+  $('#passView').classList.remove('hide');
+  clearInterval(timer);
+  const tick = () => {
+    const left = Math.max(0, p.exp - Date.now());
+    const m = Math.floor(left / 60000), s = Math.floor(left % 60000 / 1000);
+    $('#timer').textContent = left ? `${m}:${String(s).padStart(2,'0')}` : 'Expired';
+    $('#pass').classList.toggle('expired', !left);
+    if (!left) clearInterval(timer);
+  };
+  tick(); timer = setInterval(tick, 1000);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('#make').addEventListener('click', () => {
+  if (!picked) return;
+  const p = {
+    code: String(Math.floor(100000 + Math.random() * 900000)),
+    // First two digits identify the book so the kiosk can find it offline.
+    pin: String(SHELF.find(b => b.id === picked).num) + String(Math.floor(Math.random() * 100)).padStart(2, '0'),
+    book: picked,
+    name: ($('#name').value.trim() || 'Reader').slice(0, 20),
+    exp: Date.now() + 30 * 60 * 1000,
+  };
+  store.set('bs-pass', p);
+  showPass(p);
+});
+$('#again').addEventListener('click', () => {
+  clearInterval(timer); store.del('bs-pass');
+  $('#passView').classList.add('hide'); $('#picker').classList.remove('hide');
+});
+
+/* Tabs */
+document.querySelectorAll('.seg button').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b === btn));
+  $('#collect').classList.toggle('hide', btn.dataset.tab !== 'collect');
+  $('#return').classList.toggle('hide', btn.dataset.tab !== 'return');
+}));
+
+/* Static QR grids */
+const grid = list => list.map(d => `<div>${qrSvg(d.payload, 4)}<b>${esc(d.label)}</b><span>${esc(d.detail)}</span></div>`).join('');
+$('#demos').innerHTML = grid(DEMOS);
+$('#returns').innerHTML = grid(RETURNS);
+
+renderBooks();
+const saved = store.get('bs-pass');
+if (saved && saved.exp > Date.now() && saved.pin) showPass(saved);
+</script>
+</body>
+</html>
