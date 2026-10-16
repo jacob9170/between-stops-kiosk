@@ -45,6 +45,12 @@ struct RootView: View {
                     .zIndex(10)
             }
 
+            if store.showTour {
+                TourView()
+                    .transition(.opacity)
+                    .zIndex(15)
+            }
+
             if store.stillThere {
                 StillThereView()
                     .transition(.opacity)

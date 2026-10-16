@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 <style>
 :root{
   --ink:#182033; --ink2:#0F141F; --yellow:#FFC72C; --yellow-deep:#E0A800; --blue:#2D5BA8; --grey:#E9ECF1;
@@ -430,6 +431,71 @@ textarea.review::placeholder{color:rgba(255,255,255,.4)}
 .qrbox span{font-size:.8rem;color:var(--muted)}
 .scroll{overflow-y:auto}
 
+/* ---------- Usability round 2 ---------- */
+.cam-status{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;background:rgba(0,0,0,.55);font-weight:700;font-size:1.05rem;color:#fff;white-space:nowrap;z-index:2}
+.cam-status i{width:10px;height:10px;border-radius:50%;background:#aaa;flex-shrink:0}
+.cam-status[data-state=starting] i{width:14px;height:14px;background:transparent;border:2px solid #fff;border-top-color:transparent;animation:spin .8s linear infinite}
+.cam-status[data-state=live] i{background:var(--mint);animation:ping 1.6s infinite}
+.cam-status[data-state=off] i{background:var(--t1)}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(61,220,151,.7)}100%{box-shadow:0 0 0 12px rgba(61,220,151,0)}}
+.mini-steps{display:flex;align-items:center;gap:10px;margin-top:12px;font-weight:700;font-size:1rem;color:rgba(255,255,255,.75)}
+.mini-steps em{font-style:normal;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--yellow);color:var(--ink);font-size:.85rem;margin-right:6px}
+.mini-steps .ar{color:rgba(255,255,255,.35)}
+.steps-bar{display:flex;align-items:center;justify-content:center;gap:12px;padding:24px 0 0}
+.sb{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem;color:rgba(255,255,255,.45);transition:color .3s}
+.sb i{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:2px solid rgba(255,255,255,.25);font-style:normal;transition:all .35s cubic-bezier(.3,1.5,.5,1)}
+.sb.now{color:#fff}
+.sb.now i{border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 0 5px rgba(255,199,44,.18)}
+.sb.done{color:rgba(255,255,255,.85)}
+.sb.done i{background:var(--mint);border-color:var(--mint);color:var(--ink)}
+.sb-line{width:56px;height:2px;background:rgba(255,255,255,.2);transition:background .35s}
+.sb-line.done{background:var(--mint)}
+.steps-bar.light .sb{color:var(--muted)}
+.steps-bar.light .sb i{border-color:var(--line)}
+.steps-bar.light .sb.now{color:var(--ink)}
+.steps-bar.light .sb.now i{border-color:var(--ink);color:var(--ink);box-shadow:0 0 0 5px rgba(24,32,51,.08)}
+.steps-bar.light .sb-line{background:var(--line)}
+.tile .free{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:4px 9px;border-radius:999px;background:#DFF0E7;color:var(--green);font-weight:700;font-size:.78rem;white-space:nowrap}
+.tourlink{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:20px;border:2px dashed var(--line);color:var(--blue);font-weight:700;font-size:1.05rem;animation:slideR .55s .24s both}
+.loans{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;flex:1;padding:2px}
+.loan{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;border-radius:20px;background:#fff;text-align:left;animation:slideR .5s both}
+.loan .lt{flex:1;min-width:0}
+.loan .lt b{display:block;font-size:1.1rem;line-height:1.2}
+.loan .lt span{display:block;font-size:.9rem;color:var(--muted);margin-top:3px}
+.loan .new{padding:4px 10px;border-radius:999px;background:var(--yellow);font-weight:700;font-size:.8rem;white-space:nowrap}
+.loan .chev{color:var(--line)}
+.you-return{display:flex;gap:20px;align-items:center;padding:16px;border-radius:22px;background:rgba(255,255,255,.07)}
+.you-return small{font-size:1rem;font-weight:700;color:var(--yellow)}
+.you-return .who{display:block;margin-top:6px;font-size:.95rem;color:rgba(255,255,255,.6)}
+.returned{display:flex;align-items:center;gap:10px;font-size:1.3rem;font-weight:700;color:var(--yellow)}
+.returned b{color:#fff}
+.choice .ci{width:64px;height:64px;border-radius:20px;background:var(--yellow);color:var(--ink);display:grid;place-items:center}
+.choice:hover,.choice:focus-visible{border-color:rgba(255,255,255,.5)}
+.bc-card{flex-direction:column;align-items:stretch;gap:16px;width:470px}
+.bc-display{height:76px;border-radius:18px;background:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-size:2rem;font-weight:700;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.bc-display.empty{color:var(--line)}
+.bt .res{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:.85rem;font-weight:700;color:var(--muted)}
+.scope{display:block;font-size:.8rem;font-weight:700;opacity:.7;margin-top:2px;text-align:left}
+.about-h{font-size:1.25rem;margin-top:6px}
+.about{font-size:1.15rem;line-height:1.55;color:var(--ink)}
+.goodfor{align-self:flex-start;display:flex;gap:8px;align-items:center;padding:8px 14px;border-radius:999px;background:#DFF0E7;color:var(--green);font-weight:700}
+.tour{position:absolute;inset:0;background:rgba(24,32,51,.6);display:grid;place-items:center;animation:fade .3s}
+.tour-card{position:relative;width:700px;padding:36px 40px 32px;border-radius:36px;background:var(--bg);display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;box-shadow:0 20px 40px rgba(24,32,51,.3);animation:alertIn .45s cubic-bezier(.3,1.5,.5,1)}
+.tour-step{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;animation:fadeIn .35s ease}
+.tour-art{position:relative;width:100%;height:250px;border-radius:26px;display:flex;align-items:center;justify-content:center;gap:18px;overflow:hidden}
+.tour-skip{position:absolute;top:20px;right:24px;font-weight:700;color:var(--muted);font-size:1.05rem;z-index:2}
+.tour small{font-weight:700;color:var(--muted);font-size:1rem}
+.tour h3{font-size:2rem}
+.tour p{font-size:1.2rem;color:var(--muted);line-height:1.45;max-width:560px}
+.tour-dots{display:flex;gap:8px;margin-top:4px}
+.tour-dots i{width:10px;height:10px;border-radius:5px;background:var(--line);transition:all .3s}
+.tour-dots i.on{width:30px;background:var(--ink)}
+.tour-nav{display:flex;gap:14px;width:100%;margin-top:8px}
+.tour .phone{position:relative;left:auto;top:auto;margin:0;animation:none;transform:scale(.72)}
+.tour .cam{width:84px;height:84px;border-radius:50%;background:var(--ink);display:grid;place-items:center;color:var(--yellow);box-shadow:0 0 0 10px rgba(24,32,51,.12)}
+.tour .ar{color:var(--ink);opacity:.5;animation:nudge 1s ease-in-out infinite alternate}
+@keyframes nudge{to{transform:translateX(10px)}}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -455,59 +521,59 @@ const PHONE_APP = 'https://rjschweitz.github.io/test';
 const CAR = 2;
 
 const BOOKS = [
-  { id:'redfern', num:11, title:'The Long Way to Redfern', author:'Mae Okafor', genre:'Fiction', pages:312, c1:'#2D5BA8', c2:'#FFC72C', art:'sun', km:412, barcode:'9780000000017',
+  { id:'redfern', num:11, title:'The Long Way to Redfern', author:'Mae Okafor', genre:'Fiction', pages:312, c1:'#2D5BA8', c2:'#FFC72C', art:'sun', km:412, barcode:'9780640001377', about:"Told in alternating chapters from each sister's seat, it's a quiet, gripping story about family, distance and the routines we hide behind. Short chapters make it easy to read a few stops at a time.", good:'Long commutes, fans of literary mysteries',
     blurb:'Two sisters catch the same train every morning for a year without saying a word to each other. One of them is keeping a secret about the line.',
     trips:[['Left on this train at Strathfield','Today, 6:58am'],['Read from Hornsby to Central by Sam','Yesterday'],['Read from Epping to Chatswood','3 days ago'],['First shelved at Parramatta','2 weeks ago']],
     note:{text:'Read this between Lidcombe and Central and completely missed my stop. Worth it.', by:'Sam'},
     reviews:[{stars:5,text:'Read this between Lidcombe and Central and completely missed my stop.',tags:["Couldn't put it down"],by:'Sam',when:'Yesterday'},{stars:4,text:'The ending on the platform got me.',tags:['Beautiful writing'],by:'Priya',when:'Last week'}] },
-  { id:'tides', num:12, title:'Small Tides', author:'Jun Park', genre:'Poetry', pages:84, c1:'#1F7A6B', c2:'#F5E6C8', art:'waves', km:138, barcode:'9780000000024',
+  { id:'tides', num:12, title:'Small Tides', author:'Jun Park', genre:'Poetry', pages:84, c1:'#1F7A6B', c2:'#F5E6C8', art:'waves', km:138, barcode:'9780640002749', about:"Forty short poems, most under a page, written on the author's own ferry and train rides around Sydney Harbour. Easy to dip in and out of between stations.", good:'Short trips, reading aloud',
     blurb:'Short poems about harbours, ferries and the people you only ever see on the morning commute.',
     trips:[['Left on this train by Priya','Today, 7:12am'],['Read on the T4 to Bondi Junction','Last week']],
     note:{text:'Page 31 is the one. Read it twice.', by:'Priya'},
     reviews:[{stars:5,text:'Page 31 is the one. Read it twice.',tags:['Perfect for a short trip'],by:'Priya',when:'Today'}] },
-  { id:'signal', num:13, title:'Signal Failure', author:'Dana Whitlock', genre:'Non-fiction', pages:240, c1:'#C2402A', c2:'#FFF4E8', art:'stripes', km:265, barcode:'9780000000031',
+  { id:'signal', num:13, title:'Signal Failure', author:'Dana Whitlock', genre:'Non-fiction', pages:240, c1:'#C2402A', c2:'#FFF4E8', art:'stripes', km:265, barcode:'9780640004118', about:"Based on interviews with signallers, drivers and network controllers, it explains how Sydney's rail network runs minute by minute, with diagrams and true stories from big breakdowns.", good:'Curious commuters, train lovers',
     blurb:'How a city keeps a thousand trains moving every day, and what happens in the control room when one of them stops.',
     trips:[['Left at Central by Marco','Yesterday'],['Read from Penrith to Blacktown','4 days ago']],
     reviews:[{stars:4,text:"I'll never complain about delays again.",tags:['Learned something'],by:'Marco',when:'Yesterday'}] },
-  { id:'pip', num:14, title:'Pip and the Night Train', author:'Hana Lowe', genre:'Kids', pages:32, c1:'#FFC72C', c2:'#182033', art:'dots', km:74, barcode:'9780000000048',
+  { id:'pip', num:14, title:'Pip and the Night Train', author:'Hana Lowe', genre:'Kids', pages:32, c1:'#FFC72C', c2:'#182033', art:'dots', km:74, barcode:'9780640005481', about:'A gently rhyming picture book with bright full-page illustrations of real NSW stations. Takes about five minutes to read aloud.', good:'Kids 3 to 7, bedtime',
     blurb:'Pip is too excited to sleep, so the night train takes her on a tour of every sleeping town on the line.',
     trips:[['Left on this train by Tom','Yesterday'],['Read at Wynyard','Last week']],
     reviews:[{stars:5,text:'My daughter asked for it three nights running.',tags:['Great for kids'],by:'Tom',when:'Last week'}] },
-  { id:'kettle', num:15, title:'Everything the Kettle Knows', author:'Rosa Mendes', genre:'Fiction', pages:198, c1:'#E8B4BC', c2:'#5A2333', art:'circle', km:96, barcode:'9780000000055',
+  { id:'kettle', num:15, title:'Everything the Kettle Knows', author:'Rosa Mendes', genre:'Fiction', pages:198, c1:'#E8B4BC', c2:'#5A2333', art:'circle', km:96, barcode:'9780640006853', about:'Each chapter follows a different flatmate through the same chaotic year, from first lease to last goodbye. Light, funny and warm, with a surprisingly moving ending.', good:'Feel-good reading, short chapters',
     blurb:'A share house, five flatmates and one kettle that has heard every argument. Funny, warm and quick to get into.',
     trips:[['Left on this train by Jess','Today, 6:40am']],
     reviews:[{stars:4,text:'Laughed out loud on the quiet carriage. Sorry everyone.',tags:['Made me laugh'],by:'Jess',when:'Today'},{stars:3,text:'',tags:['Slow start, worth it'],by:'Ben',when:'2 weeks ago'}] },
-  { id:'birds', num:16, title:'A Field Guide to City Birds', author:'Tom Ashby', genre:'Non-fiction', pages:96, c1:'#7FA650', c2:'#FFFFFF', art:'bird', km:187, barcode:'9780000000062',
+  { id:'birds', num:16, title:'A Field Guide to City Birds', author:'Tom Ashby', genre:'Non-fiction', pages:96, c1:'#7FA650', c2:'#FFFFFF', art:'bird', km:187, barcode:'9780640008222', about:'Covers 40 common birds you can spot from the train or platform, each with a colour illustration, where to look and what it sounds like.', good:'Short trips, kids and adults',
     blurb:'Spot the ibis, the noisy miner and the currawong from the train window. Pocket sized and great for short trips.',
     trips:[['Left on this train by Alex','2 days ago'],['Read at Lidcombe','Last week']],
     reviews:[{stars:4,text:'Spotted three currawongs at Strathfield thanks to this.',tags:['Learned something'],by:'Alex',when:'2 days ago'}] },
-  { id:'katoomba', num:17, title:'Last Stop, Katoomba', author:'Ellie Brandt', genre:'Fiction', pages:288, c1:'#3B2F6B', c2:'#FFC72C', art:'moon', km:54, barcode:'9780000000079',
+  { id:'katoomba', num:17, title:'Last Stop, Katoomba', author:'Ellie Brandt', genre:'Fiction', pages:288, c1:'#3B2F6B', c2:'#FFC72C', art:'moon', km:54, barcode:'9780640009595', about:'A slow-burn thriller set over one night on the Blue Mountains line, with twists right up to the final stop.', good:'Thriller fans, evening trips',
     blurb:'A missed connection, a mountain fog and a stranger who seems to know exactly where the night is going.',
     trips:[['Left on this train by Ana','Yesterday']],
     reviews:[{stars:5,text:'Perfect foggy morning read.',tags:['Read it in one go'],by:'Ana',when:'Yesterday'}] },
-  { id:'quiet', num:18, title:'The Quiet Carriage', author:'Marcus Lee', genre:'Fiction', pages:276, c1:'#182033', c2:'#E9ECF1', art:'lines', km:211, barcode:'9780000000086',
+  { id:'quiet', num:18, title:'The Quiet Carriage', author:'Marcus Lee', genre:'Fiction', pages:276, c1:'#182033', c2:'#E9ECF1', art:'lines', km:211, barcode:'9780640010966', about:'A clever heist story where every scene takes place in the quiet carriage of a peak-hour train. Sharp dialogue, short chapters and a satisfying final twist.', good:'Mystery fans, long commutes',
     blurb:'Nobody is allowed to talk in the quiet carriage, which makes it the perfect place to plan something.',
     trips:[['Left on this train by Kim','Today, 7:30am']], reviews:[] },
-  { id:'bread', num:19, title:'Bread, Mostly', author:'Lena Fischer', genre:'Non-fiction', pages:198, c1:'#D9A441', c2:'#3A2A12', art:'circle', km:129, barcode:'9780000000093',
+  { id:'bread', num:19, title:'Bread, Mostly', author:'Lena Fischer', genre:'Non-fiction', pages:198, c1:'#D9A441', c2:'#3A2A12', art:'circle', km:129, barcode:'9780640012335', about:'Part memoir, part recipe book, following a year in a small Marrickville bakery. Includes ten simple recipes to try at home.', good:'Food lovers, slow mornings',
     blurb:'A baker writes about early starts, sourdough and the regulars who keep a small shop going.',
     trips:[['Left on this train by Ben','Yesterday']], reviews:[] },
-  { id:'map', num:20, title:'How to Fold a Map', author:'Noor Haddad', genre:'Non-fiction', pages:128, c1:'#E9ECF1', c2:'#2D5BA8', art:'lines', km:302, barcode:'9780000000109',
+  { id:'map', num:20, title:'How to Fold a Map', author:'Noor Haddad', genre:'Non-fiction', pages:128, c1:'#E9ECF1', c2:'#2D5BA8', art:'lines', km:302, barcode:'9780640013707', about:'Twelve short essays about walks, wrong turns and the joy of not knowing where you are, set in cities around the world.', good:'Dipping in and out',
     blurb:'Short essays about getting lost on purpose, from a writer who has never once folded a map the right way.',
     trips:[['Left on the 8:20 by Lily','Yesterday']], reviews:[] },
-  { id:'fig', num:21, title:'The Fig Tree Club', author:'Ari Coleman', genre:'Kids', pages:64, c1:'#4E8A3E', c2:'#FFE7A3', art:'circle', km:88, barcode:'9780000000116',
+  { id:'fig', num:21, title:'The Fig Tree Club', author:'Ari Coleman', genre:'Kids', pages:64, c1:'#4E8A3E', c2:'#FFE7A3', art:'circle', km:88, barcode:'9780640015077', about:'A warm chapter book about friendship, change and growing up, with simple language and an illustration every few pages.', good:'Kids 7 to 10, first chapter books',
     blurb:'Four friends, one giant fig tree in the park, and a summer holiday that nobody wants to end.',
     trips:[['Left on the 8:20 by Joel','2 days ago']], reviews:[] },
-  { id:'orchard', num:22, title:'Orchard Hours', author:'Sofia Brennan', genre:'Fiction', pages:240, c1:'#B5523B', c2:'#FBE3C9', art:'sun', km:176, barcode:'9780000000123',
+  { id:'orchard', num:22, title:'Orchard Hours', author:'Sofia Brennan', genre:'Fiction', pages:240, c1:'#B5523B', c2:'#FBE3C9', art:'sun', km:176, barcode:'9780640016449', about:'A quiet family drama across four seasons on a NSW apple orchard, about grief, belonging and starting again.', good:'Slow, thoughtful reading',
     blurb:'A woman goes back to her family orchard for one harvest and ends up staying for the whole year.',
     trips:[['Picked up by Alex','Yesterday'],['Left on this train by Mia','Last week']], reviews:[] },
-  { id:'salt', num:23, title:'Salt and Static', author:'Priya Raman', genre:'Fiction', pages:224, c1:'#5B8DB8', c2:'#FFFFFF', art:'waves', km:0, barcode:'9780000000130',
+  { id:'salt', num:23, title:'Salt and Static', author:'Priya Raman', genre:'Fiction', pages:224, c1:'#5B8DB8', c2:'#FFFFFF', art:'waves', km:0, barcode:'9780640017811', about:"An eerie, atmospheric mystery that blends late-night radio, old train lines and a ghost story you can't quite explain.", good:'Late trips, mystery fans',
     blurb:'A radio host on the late shift starts getting calls from someone who says they are on a train that stopped running years ago.',
     trips:[['Bought and shared by Alex','Today']], reviews:[] },
 ];
 
 const SLOT_LAYOUT = { A1:'redfern', A2:'tides', A3:'signal', A4:'pip', B1:'kettle', B3:'birds', B4:'katoomba', C1:'quiet', C2:'bread' };
 const SLOT_HOLDS = { A1:'482913', A2:'105277' };
-const LOANS = { salt:'Alex', orchard:'Alex', map:'Priya', fig:'Joel' };
+const LOANS = { salt:{ name:'Alex', ago:2*864e5 }, orchard:{ name:'Alex', ago:864e5 }, map:{ name:'Priya', ago:3*864e5 }, fig:{ name:'Joel', ago:2*864e5 } };
 const BOOKMARKS = { Alex:{ redfern:142 } };
 
 const DEMO_PASSES = [
@@ -518,7 +584,7 @@ const DEMO_PASSES = [
 ];
 const DEMO_RETURNS = [
   { label:'Salt and Static', detail:'Out with Alex', payload:'betweenstops://return?book=salt' },
-  { label:'Orchard Hours', detail:'Out with Alex', payload:'9780000000123' },
+  { label:'Orchard Hours', detail:'Out with Alex', payload:'9780640016449' },
   { label:'How to Fold a Map', detail:'Out with Priya', payload:'betweenstops://return?book=map' },
 ];
 
@@ -549,7 +615,7 @@ function freshState(){
       { code:'777314', pin:'2144', book:'fig', name:'Kim', exp: now + 30*60e3 },
       { code:'391540', pin:'2016', book:'map', name:'Priya', exp: now + 20*60e3, collected:true },
     ],
-    loans: clone(LOANS), bookmarks: clone(BOOKMARKS),
+    loans: Object.fromEntries(Object.entries(LOANS).map(([k, v]) => [k, { name:v.name, at: now - v.ago }])), bookmarks: clone(BOOKMARKS),
     borrowed:37, returned:29, km:18420, openDoors:new Set(),
     showDemo:true, lastTouch: now, still:false, alert:null,
     nextStop:3, legStart: now, legLen:40000,
@@ -744,8 +810,17 @@ const Cam = {
     video.srcObject = stream;
     try { await video.play(); } catch {}
     vf.classList.add('live');
-    let detector = null;
+    let detector = null, zx = null;
     if ('BarcodeDetector' in window){ try { detector = new BarcodeDetector({ formats: ['qr_code','ean_13','code_128'] }); } catch {} }
+    // Safari has no BarcodeDetector, so use ZXing for the EAN-13 barcodes on the back of books.
+    if (!detector && window.ZXing){
+      try {
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.CODE_128]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        zx = new ZXing.MultiFormatReader(); zx.setHints(hints);
+      } catch { zx = null; }
+    }
     const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
     this.timer = setInterval(async () => {
       if (!video.videoWidth || S.alert) return;
@@ -756,6 +831,9 @@ const Cam = {
           const w = 640, h = Math.round(640 * video.videoHeight / video.videoWidth);
           canvas.width = w; canvas.height = h; ctx.drawImage(video, 0, 0, w, h);
           code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' })?.data;
+          if (!code && zx){
+            try { code = zx.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(canvas)))).getText(); } catch {}
+          }
         }
       } catch {}
       if (!code) return;
@@ -782,7 +860,7 @@ function viewfinder(hint, returning = false){
       : `<div class="phone"><small>Your pass</small><div class="qr">${qrSvg(DEMO_PASSES[0].payload)}</div><b>482 913</b></div>`}
     <div class="frame" style="width:min(62%,330px);height:auto;aspect-ratio:1"><b></b><b></b><b></b><b></b></div>
     <div class="sweep"></div>
-    <div class="hint">${esc(hint)}</div>
+    <div class="cam-status" data-state="starting"><i></i><span>Starting camera…</span></div>
     <div class="flash"></div>
   </div>`;
 }
@@ -795,11 +873,33 @@ function demoTray(returning = false){
     <div class="chips-row">${list.map(d => `<button class="dchip press" data-a="scan" data-code="${esc(d.payload)}" data-ret="${returning ? 1 : ''}">${returning ? I.book(22) : I.qr()}<span><b>${esc(d.label)}</b><span>${esc(d.detail)}</span></span></button>`).join('')}</div>
   </div>`;
 }
+function camStatus(state, returning){
+  const el = $('#vf .cam-status');
+  if (!el) return;
+  el.dataset.state = state;
+  $('span', el).textContent = {
+    starting: 'Starting camera…',
+    live: returning ? 'Camera ready · scanning for a barcode' : 'Camera ready · scanning for your QR code',
+    off: returning ? 'Camera unavailable · pick your book or type the barcode' : 'Camera unavailable · use a demo pass or type your code',
+  }[state];
+}
 function startCamera(returning){
   const vf = $('#vf');
   if (!vf) return;
-  Cam.start(vf, code => handleScan(code, returning)).then(ok => { if (!ok) $('.hint', vf).textContent = returning ? 'Hold the back cover up to the camera' : 'Point your pass here'; });
+  camStatus('starting', returning);
+  Cam.start(vf, code => handleScan(code, returning)).then(ok => { if (vf.isConnected) camStatus(ok ? 'live' : 'off', returning); });
 }
+
+/* ---------- Step indicator: shows that everything from here happens at the kiosk ---------- */
+const COLLECT_STEPS = ['Scan your pass', 'Door opens', 'Take your book'];
+const RETURN_STEPS = ['Scan your book', 'Put it in the door', 'Tell us how it went'];
+function stepsBar(labels, current, light = false){
+  return `<div class="steps-bar${light ? ' light' : ''}" id="steps" role="list" aria-label="Step ${Math.min(current + 1, labels.length)} of ${labels.length}">${labels.map((l, i) => {
+    const st = i < current ? 'done' : i === current ? 'now' : '';
+    return `${i ? `<span class="sb-line${i <= current ? ' done' : ''}"></span>` : ''}<span class="sb ${st}" role="listitem"><i>${i < current ? I.check(18) : i + 1}</i>${l}</span>`;
+  }).join('')}</div>`;
+}
+function setSteps(labels, current){ const el = $('#steps'); if (el) el.outerHTML = stepsBar(labels, current); }
 
 /* ---------- Top bar & journey ---------- */
 function topbar(home = true){
@@ -871,15 +971,17 @@ MOUNT.attract = () => {
 SCREENS.home = () => `${topbar(false)}
   <div class="home-body">
     <section class="collect">
-      <div><h2>Collect your book</h2><p class="sub">Hold the QR code from the Between Stops app up to the camera.</p></div>
+      <div><h2>Have a pass? Scan it here</h2><p class="sub">Hold the QR code from your phone up to the camera. Everything else happens here at the kiosk.</p>
+        <div class="mini-steps"><span><em>1</em>Scan pass</span><span class="ar">→</span><span><em>2</em>Door opens</span><span class="ar">→</span><span><em>3</em>Take your book</span></div></div>
       ${viewfinder('Starting camera…')}
       ${demoTray()}
       <button class="btn w sm press" data-a="go" data-to="code">${I.grid()} Type my code instead</button>
     </section>
     <div class="side">
-      <button class="tile press" data-a="go" data-to="return" style="animation-delay:.05s"><span class="ic" style="background:var(--yellow)">${I.ret()}</span><span><b>Return a book</b><span>Finished? Pop it back on the shelf</span></span><span class="chev">${I.chevR()}</span></button>
-      <button class="tile press" data-a="go" data-to="browse" style="animation-delay:.12s"><span class="fan">${shelfBooks().slice(0,3).map((b,i) => cover(b, 46, false, '', `transform:rotate(${(i-1)*12}deg) translateX(${(i-1)*12}px)`)).join('')}</span><span><b>Browse the shelf</b><span>${available()} books ready to borrow, no app needed</span></span><span class="chev">${I.chevR()}</span></button>
+      <button class="tile press" data-a="go" data-to="browse" style="animation-delay:.05s"><span class="fan">${shelfBooks().slice(0,3).map((b,i) => cover(b, 46, false, '', `transform:rotate(${(i-1)*12}deg) translateX(${(i-1)*12}px)`)).join('')}</span><span><b>Browse the shelf</b><span>${available()} books ready to borrow now</span><span class="free">${I.check(14)} No phone or reservation needed</span></span><span class="chev">${I.chevR()}</span></button>
+      <button class="tile press" data-a="go" data-to="return" style="animation-delay:.12s"><span class="ic" style="background:var(--yellow)">${I.ret()}</span><span><b>Return a book</b><span>Finished? Pop it back on the shelf</span></span><span class="chev">${I.chevR()}</span></button>
       <button class="tile press" data-a="go" data-to="help" style="animation-delay:.19s"><span class="ic" style="background:var(--grey)">${I.q()}</span><span><b>How it works</b><span>Help, larger text and staff assist</span></span><span class="chev">${I.chevR()}</span></button>
+      <button class="tourlink press" data-a="tour">${I.spark(20)} New here? Take the 30 second tour</button>
       <div class="stats"><div class="stat blue"><b>${S.borrowed}</b><span>borrowed today</span></div><div class="stat"><b>${S.returned}</b><span>returned today</span></div></div>
     </div>
   </div>`;
@@ -916,8 +1018,8 @@ function keypad(target, dark = false){
 
 /* ---------- Unlock (the big moment) ---------- */
 SCREENS.unlock = job => {
-  const cell = 150;
-  return `<div class="flow">
+  const cell = 140;
+  return `${stepsBar(COLLECT_STEPS, 0)}<div class="flow">
     <div class="wall-col">${wall({ cell })}<span class="wall-cap">Car ${CAR} library shelf</span></div>
     <div class="panel" id="panel">${panelChecking(job)}</div>
   </div>`;
@@ -955,7 +1057,7 @@ function panelDone(job){
       ${page ? `<div><i>${I.bookmarkO(22)}</i><b>Page ${page}</b><span>where you left off</span></div>` : `<div><i>${I.users()}</i><b>#${b.trips.length}</b><span>reader on the line</span></div>`}
       <div><i>${I.clock()}</i><b>${readTime(b.pages)}</b><span>to read</span></div>
     </div>
-    <div style="display:flex;gap:18px;align-items:center"><button class="btn w press" style="width:220px" data-a="home">Done</button>${ring(8, 60, true)}</div>`;
+    <div style="display:flex;gap:18px;align-items:center"><button class="btn y press" style="width:280px" data-a="home">Done, back to home</button>${ring(8, 60, true)}</div>`;
 }
 MOUNT.unlock = async job => {
   const my = runId, alive = () => my === runId;
@@ -966,12 +1068,14 @@ MOUNT.unlock = async job => {
     if (!alive()) return;
   }
   setHL(job.slot);
+  setSteps(COLLECT_STEPS, 1);
   $('#panel').innerHTML = panelChecking(job, true);
   await sleep(900); if (!alive()) return;
   chime([523, 659, 784], .09);
   doorEl(job.slot).classList.add('open');
   await sleep(700); if (!alive()) return;
   doorEl(job.slot).classList.add('empty-out');
+  setSteps(COLLECT_STEPS, 2);
   $('#panel').innerHTML = panelOpen(job);
   requestAnimationFrame(() => $$('#panel .prog i').forEach(i => i.style.width = i.dataset.w + '%'));
   confetti(.72, .4);
@@ -985,6 +1089,7 @@ function finishCollect(job){
   touch();
   doorEl(job.slot)?.classList.remove('open');
   completeCollect(job);
+  setSteps(COLLECT_STEPS, 3);
   $('#panel').innerHTML = panelDone(job);
   later(() => go('home'), 8000);
 }
@@ -1004,26 +1109,52 @@ function wall({ cell = 120, tap = false, open = new Set(), arrowOn = null } = {}
 }
 
 /* ---------- Return ---------- */
+const ago = t => {
+  const m = (Date.now() - t) / 60000;
+  if (m < 2) return 'just now';
+  if (m < 60) return `${m | 0} min ago`;
+  const d = Math.floor((Date.now() - t) / 864e5);
+  return d < 1 ? 'earlier today' : d === 1 ? 'yesterday' : `${d} days ago`;
+};
+const loansNewestFirst = () => Object.entries(S.loans).sort((a, b) => b[1].at - a[1].at);
 SCREENS.return = () => `${topbar()}
-  <div class="home-body">
+  ${stepsBar(RETURN_STEPS, 0, true)}
+  <div class="home-body" style="padding-top:16px">
     <section class="collect" style="animation:none">
-      ${viewfinder('Starting camera…', true)}
-      ${demoTray(true)}
+      <div><h2 style="font-size:2rem">Scan the book you're returning</h2><p class="sub">Hold the barcode on the back cover up to the camera.</p></div>
+      ${viewfinder('', true)}
+      <button class="btn w sm press" data-a="barcode">${I.grid()} Type the barcode number instead</button>
     </section>
-    <div class="side" style="width:400px;gap:26px">
-      <div><h2 class="title">Return a book</h2><p class="sub">Thanks for passing it on.</p></div>
-      ${[['Find the barcode','On the Between Stops sticker on the back cover.'],['Hold it up to the camera',"We'll open an empty door for you."],['Pop it in and tell us how it went','Save your page or leave a review.']].map((s, i) =>
-        `<div style="display:flex;gap:16px;animation:slideR .5s ${i*.08}s both"><span style="width:46px;height:46px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;font-weight:700;font-size:1.4rem;flex-shrink:0">${i+1}</span><div><b style="font-size:1.4rem">${s[0]}</b><p style="color:var(--muted);font-size:1.05rem;margin-top:4px">${s[1]}</p></div></div>`).join('')}
-      <p style="margin-top:auto;padding:18px;border-radius:20px;background:#fff;color:var(--muted);display:flex;gap:10px">${I.tram(22)} Any Between Stops book can go in any library train, not just the one you got it from.</p>
+    <div class="side" style="width:420px;min-height:0">
+      <div><h2 class="title" style="font-size:2rem">Or pick your book</h2><p class="sub" style="font-size:1.05rem">Books out on loan right now, most recent first.</p></div>
+      <div class="loans">${loansNewestFirst().map(([id, l], i) => { const bk = book(id); return `<button class="loan press" style="animation-delay:${i * .05}s" data-a="pick-return" data-id="${id}">${cover(bk, 48, false)}<span class="lt"><b>${esc(bk.title)}</b><span>Borrowed by ${esc(l.name)} · ${ago(l.at)}</span></span>${Date.now() - l.at < 3600e3 ? '<span class="new">Just borrowed</span>' : ''}<span class="chev">${I.chevR()}</span></button>`; }).join('') || '<p class="sub">No books are out on loan right now.</p>'}</div>
     </div>
   </div>`;
 MOUNT.return = () => startCamera(true);
 
-/* Placing the book, then "Did you finish it?" */
+let BC = '';
+function barcodeEntry(){
+  BC = '';
+  openOverlay(`<div class="alert"><div class="card bc-card">
+    <div><h3 style="margin:0">Type the barcode number</h3><p style="margin-top:6px">The 13 digit number printed under the barcode on the back cover.</p></div>
+    <div class="bc-display empty" id="bc">978…</div>
+    ${keypad('barcode')}
+    <div style="display:flex;gap:12px"><button class="btn ghost sm press" data-a="close">Cancel</button><button class="btn y sm press" id="bc-go" data-a="bc-go" disabled>Find my book</button></div>
+  </div></div>`);
+}
+function updateBC(){
+  const d = $('#bc');
+  d.textContent = BC || '978…';
+  d.classList.toggle('empty', !BC);
+  $('#bc-go').disabled = BC.length !== 13;
+}
+
+/* Placing the book, then "Have you finished reading it?" */
 const R = {};
 SCREENS.place = id => {
-  Object.assign(R, { book:id, reader:S.loans[id] || null, slot:doorForReturn()?.id, phase:'placing', stars:0, tags:new Set(), text:'', anon:false, page:'' });
-  return `<div id="place" style="flex:1;display:flex">${placeView()}</div>`;
+  const loan = S.loans[id];
+  Object.assign(R, { book:id, reader:loan?.name || null, loanAt:loan?.at, slot:doorForReturn()?.id, phase:'placing', stars:0, tags:new Set(), text:'', anon:false, page:'' });
+  return `${stepsBar(RETURN_STEPS, 1)}<div id="place" style="flex:1;display:flex;min-height:0">${placeView()}</div>`;
 };
 MOUNT.place = () => {
   later(() => { chime([523, 659], .09); doorEl(R.slot)?.classList.add('open'); }, 600);
@@ -1032,19 +1163,20 @@ function placeView(){
   const b = book(R.book);
   if (R.phase === 'placing' || R.phase === 'thanks'){
     return `<div class="flow">
-      <div class="wall-col">${wall({ cell: 138, arrowOn: R.phase === 'placing' ? R.slot : null })}</div>
+      <div class="wall-col">${wall({ cell: 130, arrowOn: R.phase === 'placing' ? R.slot : null })}</div>
       <div class="panel">${R.phase === 'placing' ? `
-        <div style="display:flex;gap:20px;align-items:center" id="placing-book">${cover(b, 120)}
-          <div><div style="display:flex;align-items:center;gap:6px;color:var(--mint);font-weight:700">${I.check(18)} Found it</div>
-          <div class="serif" style="font-size:1.9rem;line-height:1.1;margin-top:4px">${esc(b.title)}</div><div style="color:rgba(255,255,255,.6)">${esc(b.author)}</div></div></div>
+        <div class="you-return" id="placing-book">${cover(b, 110)}
+          <div><small>You're returning</small>
+          <div class="serif" style="font-size:1.9rem;line-height:1.1;margin-top:4px">${esc(b.title)}</div><div style="color:rgba(255,255,255,.6)">${esc(b.author)}</div>
+          ${R.reader ? `<span class="who">Borrowed by ${esc(R.reader)} · ${ago(R.loanAt)}</span>` : ''}</div></div>
         <div class="big-h">Pop it into door ${R.slot}</div>
         <p class="muted-d">The glowing door is open. Slide the book in spine first, then tap below.</p>
         <button class="btn y press" data-a="placed">It's in, close the door</button>
-        <button class="btn ghost-d sm press" data-a="home">Cancel</button>` : thanksView()}</div></div>`;
+        <div style="display:flex;gap:12px"><button class="btn ghost-d sm press" data-a="go" data-to="return">Not this book? Scan again</button><button class="btn ghost-d sm press" style="width:200px" data-a="home">Cancel</button></div>` : thanksView()}</div></div>`;
   }
   const r = rating(b);
   return `<div class="follow">
-    <div class="book-col">${cover(b, 210)}<h3>${esc(b.title)}</h3><span style="color:rgba(255,255,255,.6)">${esc(b.author)}</span>
+    <div class="book-col">${cover(b, 200)}<h3>${esc(b.title)}</h3><span style="color:rgba(255,255,255,.6)">${esc(b.author)}</span>
       ${r ? `<span style="display:flex;align-items:center;gap:8px">${stars(r, 15, true)}<b style="color:rgba(255,255,255,.7)">${r.toFixed(1)}</b></span>` : ''}
       <span class="safe">${I.lock(16)} Safely back in door ${R.slot}</span></div>
     <div class="panel" style="gap:22px">${R.phase === 'choice' ? choiceView() : R.phase === 'review' ? reviewView() : bookmarkView()}</div>
@@ -1052,14 +1184,15 @@ function placeView(){
 }
 function choiceView(){
   const saved = bookmarkFor(R.reader, R.book);
+  // Both answers look the same on purpose, so neither reads as the default.
   return `<div class="hi">${R.reader ? `Thanks, ${esc(R.reader)}!` : 'Thanks for bringing it back!'}</div>
-    <div class="big-h" style="font-size:3rem">Did you finish it?</div>
+    <div class="big-h" style="font-size:2.9rem">Have you finished reading it?</div>
     <div class="choices">
-      <button class="choice y" data-a="phase" data-p="review">${I.seal(44)}<b>Finished it</b><span>Rate it and leave a review for the next reader</span></button>
-      <button class="choice" data-a="phase" data-p="bookmark">${I.bookmark(40)}<b>Still reading</b><span>${R.reader ? `Save your page to ${esc(R.reader)}'s account and jump back in next time` : 'Save your page and jump back in next time'}</span></button>
+      <button class="choice" data-a="phase" data-p="review"><span class="ci">${I.seal(38)}</span><b>I've finished reading it</b><span>Rate it and leave a review for the next reader</span></button>
+      <button class="choice" data-a="phase" data-p="bookmark"><span class="ci">${I.bookmark(30)}</span><b>I'm still reading it</b><span>${R.reader ? `Save your page to ${esc(R.reader)}'s account and pick up where you left off` : 'Save your page and pick up where you left off'}</span></button>
     </div>
     ${saved ? `<span class="note-line">${I.bookmarkO()} Last time you saved page ${saved}</span>` : ''}
-    <button class="btn ghost-d sm press" style="width:260px" data-a="thank" data-o="plain">Just return it</button>`;
+    <button class="linkbtn" data-a="thank" data-o="plain" style="color:rgba(255,255,255,.7)">Skip, just return it</button>`;
 }
 const STAR_LABELS = ['Tap to rate','Not for me','It was OK','Good read','Really good','Loved it!'];
 function reviewView(){
@@ -1070,7 +1203,7 @@ function reviewView(){
     <b style="color:rgba(255,255,255,.75);font-size:1.15rem">What stood out?</b>
     <div class="tags">${TAGS.map(t => `<button class="tag press${R.tags.has(t) ? ' on' : ''}" data-a="tag" data-t="${esc(t)}">${R.tags.has(t) ? I.check(16) : I.plus(16)} ${esc(t)}</button>`).join('')}</div>
     <textarea class="review" id="rtext" maxlength="240" placeholder="Write a review (optional)">${esc(R.text)}</textarea>
-    <div style="display:flex;gap:14px"><button class="btn ghost-d press" style="width:180px;height:66px" data-a="thank" data-o="plain">Skip</button>
+    <div style="display:flex;gap:14px"><button class="btn ghost-d press" style="width:180px;height:66px" data-a="phase" data-p="choice">Back</button>
       <button class="btn y press" style="height:66px" data-a="post-review" id="post" ${R.stars ? '' : 'disabled'}>${I.send()} Post my review</button></div>`;
 }
 function bookmarkView(){
@@ -1082,7 +1215,7 @@ function bookmarkView(){
       <div class="pagebig"><small>Page</small><b id="pnum">–</b><span>of ${b.pages}</span></div>
       <div class="prog"><i id="pbar"></i></div>
       <div class="note-line" id="pnote">${I.bulb()} Tip: it's the last page number you read</div>
-      <button class="linkbtn" data-a="phase" data-p="review">${I.seal(20)} Actually, I finished it. Review it</button>
+      <button class="linkbtn" data-a="phase" data-p="review">${I.seal(20)} Actually, I've finished it. Review it</button>
     </div>
     <div style="width:330px;display:flex;flex-direction:column;gap:14px">${keypad('page', true)}
       <button class="btn y press" data-a="save-page" id="psave" style="height:74px" disabled>${I.bookmark(22)} Save my page</button>
@@ -1105,15 +1238,20 @@ function thanksView(){
   const b = book(R.book), o = R.outcome;
   const icon = o.kind === 'reviewed' ? I.star(38) : o.kind === 'saved' ? I.bookmark(36) : I.heart();
   let body;
-  if (o.kind === 'reviewed') body = `<div class="serif" style="font-size:2.75rem">Thanks for the review!</div>${stars(o.stars, 30, true)}<p class="muted-d">Your ${o.stars} star review is now on ${esc(b.title)} for the next reader to see.</p>`;
-  else if (o.kind === 'saved') body = `<div class="serif" style="font-size:2.75rem">Page ${o.page} saved</div><p class="muted-d">It's on ${R.reader ? esc(R.reader) + "'s" : 'your'} account. Collect ${esc(b.title)} again on any train and we'll take you straight back to page ${o.page}.</p><div class="prog" style="max-width:420px"><i data-w="${Math.round(o.page / b.pages * 100)}"></i></div>`;
-  else body = `<div class="serif" style="font-size:2.75rem">Thanks for passing it on</div><p class="muted-d">${esc(b.title)} is back on the shelf in door ${R.slot}. It has now travelled ${b.km} km.</p>`;
-  return `<span class="circle-ic" style="color:var(--ink)">${icon}</span>${body}
-    <div style="display:flex;gap:18px;align-items:center"><button class="btn y press" data-a="go" data-to="return">Return another</button><button class="btn w press" data-a="home">Done</button>${ring(10, 60, true)}</div>`;
+  if (o.kind === 'reviewed') body = `<div class="serif" style="font-size:2.6rem">Thanks for the review!</div>${stars(o.stars, 30, true)}<p class="muted-d">Your ${o.stars} star review is now on the book for the next reader to see.</p>`;
+  else if (o.kind === 'saved') body = `<div class="serif" style="font-size:2.6rem">Page ${o.page} saved</div><p class="muted-d">It's on ${R.reader ? esc(R.reader) + "'s" : 'your'} account. Collect it again on any train and we'll take you straight back to page ${o.page}.</p><div class="prog" style="max-width:420px"><i data-w="${Math.round(o.page / b.pages * 100)}"></i></div>`;
+  else body = `<div class="serif" style="font-size:2.6rem">Thanks for passing it on</div><p class="muted-d">It's back on the shelf in door ${R.slot} for the next reader. It has now travelled ${b.km} km.</p>`;
+  // The likely next step is leaving, so Done is the main button and returning another is secondary.
+  return `<span class="circle-ic" style="color:var(--ink)">${icon}</span>
+    <div class="returned">${I.check(24)} <span>You returned <b>${esc(b.title)}</b></span></div>
+    ${body}
+    <div style="display:flex;gap:18px;align-items:center"><button class="btn y press" style="width:300px" data-a="home">Done, back to home</button>${ring(10, 60, true)}</div>
+    <button class="linkbtn" data-a="go" data-to="return" style="color:rgba(255,255,255,.75)">${I.ret(20)} Return another book</button>`;
 }
 function setPhase(p){
   R.phase = p;
   $('#place').innerHTML = placeView();
+  setSteps(RETURN_STEPS, p === 'placing' ? 1 : p === 'thanks' ? 3 : 2);
   if (p === 'thanks'){
     requestAnimationFrame(() => $$('#place .prog i').forEach(i => i.style.width = i.dataset.w + '%'));
     confetti(.72, .35, 90); chime([659, 784, 1047], .1);
@@ -1132,16 +1270,17 @@ function thank(kind, extra = {}){
 let genre = 'All';
 SCREENS.browse = () => `${topbar()}
   <div class="browse-head"><div><h2 class="title">On the shelf</h2><p class="sub">${available()} books ready to borrow right now. Tap one to take a look.</p></div>
-    <button class="btn ink press" style="width:230px;height:64px" data-a="surprise">${I.dice()} Surprise me</button></div>
+    <button class="btn ink press" style="width:250px;height:68px" data-a="surprise">${I.dice()} <span>Surprise me<span class="scope" id="scope">${scopeText()}</span></span></button></div>
   <div class="gchips">${GENRES.map(g => `<button class="gchip press${g === genre ? ' on' : ''}" data-a="genre" data-g="${g}">${g}</button>`).join('')}</div>
   <div class="grid" id="grid">${gridHtml()}</div>`;
+const scopeText = () => genre === 'All' ? 'from all available books' : `from ${genre.toLowerCase()} only`;
 function gridHtml(){
   const list = shelfBooks().filter(b => genre === 'All' ? true : genre === 'Short reads' ? b.pages <= 100 : b.genre === genre);
   if (!list.length) return `<p class="sub" style="grid-column:1/-1;padding:40px">Nothing in ${genre.toLowerCase()} on this shelf right now. Try another one.</p>`;
   return list.map((b, i) => { const r = rating(b), h = isHeld(b.id); return `<button class="bt press${h ? ' held' : ''}" style="animation-delay:${i*.04}s" data-a="detail" data-id="${b.id}">
-    <div style="position:relative">${h ? `<span class="heldtag">${I.lock(12)} Held</span>` : ''}${cover(b, 170)}</div>
+    <div style="position:relative">${h ? `<span class="heldtag">${I.lock(12)} Reserved</span>` : ''}${cover(b, 170)}</div>
     <div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div>
-    ${r ? `<div class="r">${stars(r, 12)} (${b.reviews.length})</div>` : ''}</button>`; }).join('');
+    ${h ? `<div class="res">${I.lock(12)} Reserved: unavailable right now</div>` : r ? `<div class="r">${stars(r, 12)} (${b.reviews.length})</div>` : ''}</button>`; }).join('');
 }
 function openDetail(id, showQR = false){
   const b = book(id), s = slotOf(id), held = !!s?.hold, r = rating(b);
@@ -1154,13 +1293,16 @@ function openDetail(id, showQR = false){
         ${r ? `<div style="display:flex;align-items:center;gap:10px">${stars(r, 20)}<b style="font-size:1.25rem">${r.toFixed(1)}</b><span style="color:var(--muted)">from ${b.reviews.length} reader${b.reviews.length === 1 ? '' : 's'}</span></div>` : ''}
         <div class="pills"><span class="pill">${b.genre}</span><span class="pill">${b.pages} pages</span><span class="pill">About ${readTime(b.pages)} read</span><span class="pill h">${b.km} km travelled</span></div>
         <p class="blurb">${esc(b.blurb)}</p>
+        <b class="about-h">About this book</b>
+        <p class="about">${esc(b.about)}</p>
+        <span class="goodfor">${I.check(16)} Good for: ${esc(b.good)}</span>
         ${b.note ? `<div class="lastnote"><small>Left by the last reader</small><p>“${esc(b.note.text)}”</p><small style="font-weight:400">${esc(b.note.by)}</small></div>` : ''}
         ${b.reviews.length ? `<b style="font-size:1.25rem;margin-top:6px">Reviews</b>${b.reviews.slice(0,3).map(rv => `<div class="rcard"><div class="rh">${stars(rv.stars, 14)}<span>${esc(rv.by)} · ${esc(rv.when)}</span></div>${rv.text ? `<p>${esc(rv.text)}</p>` : ''}${rv.tags?.length ? `<div class="tags">${rv.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}</div>`).join('')}` : ''}
         <b style="font-size:1.25rem;margin-top:6px">Where it's been</b>
         <ul class="tl">${b.trips.slice(0,4).map(t => `<li><b>${esc(t[0])}</b><span>${esc(t[1])}</span></li>`).join('')}</ul>
       </div>
       <div class="right">
-        ${held ? `<div class="heldbox">${I.lock(30)}<b>Held for another reader</b><span>If they don't collect it in 30 minutes it goes back on the shelf.</span></div>`
+        ${held ? `<div class="heldbox">${I.lock(30)}<b>Reserved: unavailable right now</b><span>Someone reserved this book in the app. If they don't collect it within 30 minutes, it goes back on the shelf.</span></div>`
                : `<button class="btn y press" style="height:80px" data-a="borrow" data-id="${b.id}">${I.unlock()} Borrow now</button><p style="text-align:center;color:var(--muted);font-size:.95rem">Free, no card needed. Leave it on any library train when you're done.</p>`}
         <button class="btn ghost sm press" data-a="appqr" data-id="${b.id}">${I.phone()} ${showQR ? 'Hide' : 'Get the app'}</button>
         ${showQR ? `<div class="appqr">${qrSvg(PHONE_APP)}<p style="margin-top:8px">Scan to reserve books for your next trip</p></div>` : ''}
@@ -1169,9 +1311,10 @@ function openDetail(id, showQR = false){
     </div>`);
 }
 async function surprise(){
-  const pool = shelfBooks().filter(b => !isHeld(b.id));
-  if (!pool.length) return;
-  openOverlay(`<div class="reel"><h3 id="reel-h">Picking something for you…</h3><div class="win" id="win"></div>
+  // Only pick from what's on screen: available books in the chosen category.
+  const pool = shelfBooks().filter(b => !isHeld(b.id) && (genre === 'All' ? true : genre === 'Short reads' ? b.pages <= 100 : b.genre === genre));
+  if (!pool.length) return toast(`No ${genre.toLowerCase()} books are free right now`);
+  openOverlay(`<div class="reel"><h3 id="reel-h">Picking something for you…</h3><p style="margin-top:-18px;color:rgba(255,255,255,.6);font-weight:700">${genre === 'All' ? 'From all available books' : `From ${esc(genre.toLowerCase())} only`}</p><div class="win" id="win"></div>
     <div class="acts" id="reel-acts"><button class="btn ghost-d sm press" data-a="surprise">Spin again</button><button class="btn y sm press" data-a="reel-look">Take a look</button></div>
     <button class="press" data-a="close" style="color:rgba(255,255,255,.6);font-weight:700;font-size:1.15rem">Close</button></div>`);
   const my = ++surprise.n;
@@ -1197,9 +1340,10 @@ surprise.n = 0;
 /* ---------- Help ---------- */
 SCREENS.help = () => `${topbar()}
   <div class="help">
-    <div><h2 class="title">How it works</h2><p class="sub">A free library that lives on the train. Take a book, leave a book.</p></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px"><div><h2 class="title">How it works</h2><p class="sub">A free library that lives on the train. Take a book, leave a book.</p></div>
+      <button class="btn ink press" style="width:340px" data-a="tour">${I.spark()} Take the step-by-step tour</button></div>
     <div class="steps">${[
-      [I.phone(36), 'Reserve in the app', 'Find a library train and hold a book for 30 minutes.', 'var(--blue)', '#fff'],
+      [I.phone(36), 'Reserve in the app', 'Find a library train and reserve a book. We keep it for you for 30 minutes.', 'var(--blue)', '#fff'],
       [I.qr(36), 'Scan it here', 'Hold your QR code up to the camera, or type your code.', 'var(--yellow)', 'var(--ink)'],
       [I.book(36), 'Take it, read it', 'Your door pops open. Keep it as long as you like.', '#1F7A6B', '#fff'],
       [I.ret(36), 'Leave it anywhere', 'Return it to any kiosk. Save your page or leave a review.', 'var(--t1)', 'var(--ink)'],
@@ -1217,6 +1361,40 @@ SCREENS.help = () => `${topbar()}
     <p style="color:var(--muted)">Good to know: books are free, there are no late fees, and kids are welcome to borrow. Please keep food away from the shelf.</p>
   </div>`;
 
+/* ---------- Step-by-step tour (Back / Next / Skip) ---------- */
+const TOUR = [
+  { title:'Welcome to Between Stops', body:'A free library that rides on the train. Borrow a book for your trip and return it on any library train when you\'re done.', bg:'var(--ink)',
+    art:() => `<span style="display:flex;align-items:flex-end">${S.books.slice(0,3).map((b, i) => cover(b, 110, true, '', `transform:rotate(${(i-1)*10}deg) translateY(${i===1?-12:0}px);margin:0 -10px`)).join('')}</span>` },
+  { title:'Reserved a book? Scan your pass', body:'Hold the QR code from the Between Stops app up to the camera on the home screen. No QR? Type your 6 digit code or 4 digit quick code instead.', bg:'#E3EAF5',
+    art:() => `<div class="phone"><small>Your pass</small><div class="qr">${qrSvg(DEMO_PASSES[0].payload)}</div><b>482 913</b></div><span class="ar">${I.chevR(40)}</span><span class="cam">${I.qr(40)}</span>` },
+  { title:'Your door opens', body:'A door on the shelf lights up and swings open. Take your book, and the door closes by itself. That\'s it, no need to go back to your phone.', bg:'var(--ink)',
+    art:() => `<div class="wall" style="--w:96px;grid-template-columns:repeat(3,96px)">${['A1','A2','A3'].map((id, i) => { const b = book(['redfern','tides','signal'][i]); return `<div class="door${i===1?' hl':''}" data-tour-door="${i===1?1:''}"><div class="cav">${cover(b, 60, false)}</div><div class="glass"><span class="lbl">${id}</span><span class="hd"></span><span class="led ok"></span></div></div>`; }).join('')}</div>` },
+  { title:'No phone? Browse the shelf', body:'Tap Browse the shelf to see every book behind the glass. Anything that isn\'t reserved can be borrowed straight away. No account needed.', bg:'#DFF0E7',
+    art:() => `${shelfBooks().filter(b => !isHeld(b.id)).slice(0,3).map(b => cover(b, 100)).join('')}<span class="pill" style="position:absolute;bottom:18px;background:var(--yellow);font-size:1.1rem;padding:10px 18px">${I.unlock(18)} Borrow now</span>` },
+  { title:'Returning a book', body:'Tap Return a book and scan the barcode on the back cover. Pop it in the open door, then save your page or leave a review.', bg:'var(--held)',
+    art:() => `<span class="ic" style="width:96px;height:96px;border-radius:28px;background:var(--yellow);display:grid;place-items:center">${I.ret(48)}</span><span class="ar">${I.chevR(40)}</span>${cover(book('salt'), 100)}<span class="ar">${I.chevR(40)}</span><span style="display:flex;flex-direction:column;gap:10px;color:var(--ink)">${I.bookmark(40)}${I.star(40)}</span>` },
+];
+function tour(i = 0){
+  touch();
+  const t = TOUR[i], last = i === TOUR.length - 1;
+  openOverlay(`<div class="tour"><div class="tour-card" role="dialog" aria-label="How it works tour">
+    <button class="tour-skip press" data-a="close">Skip tour</button>
+    <div class="tour-step">
+      <div class="tour-art" style="background:${t.bg}">${t.art()}</div>
+      <small>Step ${i + 1} of ${TOUR.length}</small>
+      <h3>${t.title}</h3>
+      <p>${t.body}</p>
+    </div>
+    <div class="tour-dots">${TOUR.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="tour-nav">
+      <button class="btn ghost sm press" data-a="tour-go" data-i="${i - 1}" ${i === 0 ? 'disabled' : ''}>${I.chevL()} Back</button>
+      <button class="btn y sm press" data-a="${last ? 'close' : 'tour-go'}" data-i="${i + 1}">${last ? 'Got it' : 'Next'} ${last ? I.check() : I.chevR()}</button>
+    </div>
+  </div></div>`);
+  const door = $('[data-tour-door="1"]');
+  if (door) setTimeout(() => { door.classList.add('open'); chime([523, 659, 784], .08); }, 700);
+}
+
 /* ---------- Staff (long-press the logo for 2 seconds, PIN 2468) ---------- */
 let pin = '';
 SCREENS.staff = () => { pin = ''; return `${topbar()}<div id="staff" style="flex:1;display:flex;flex-direction:column">${gateView()}</div>`; };
@@ -1232,7 +1410,7 @@ function dashView(){
   return `<div class="dash-body">
     <div class="wall-side"><h3 style="font-size:1.5rem">Shelf status</h3><p style="color:var(--muted)">Tap a door to open or close it.</p>
       ${wall({ cell: 112, tap: true, open: S.openDoors })}
-      <div class="legend"><span><i style="background:var(--mint)"></i>Ready</span><span><i style="background:var(--t1)"></i>Held</span><span><i style="background:var(--line)"></i>Empty</span><span><i style="background:var(--yellow)"></i>Open</span></div></div>
+      <div class="legend"><span><i style="background:var(--mint)"></i>Ready</span><span><i style="background:var(--t1)"></i>Reserved</span><span><i style="background:var(--line)"></i>Empty</span><span><i style="background:var(--yellow)"></i>Open</span></div></div>
     <div class="dash-right">
       <div class="metrics">
         <div class="metric"><b>${shelfBooks().length}/${S.slots.length}</b><span>doors filled</span></div>
@@ -1283,7 +1461,9 @@ function showAlert(icon, title, msg, bookId){
 function handleScan(raw, returning = false){
   touch();
   const p = parse(raw);
-  if (!p) return showAlert(I.qr(34), "That code isn't one of ours", 'Open the Between Stops app, tap your reservation and hold the QR code up to the camera.');
+  if (!p) return returning
+    ? showAlert(I.book(34), "We don't recognise that barcode", "Only books with a Between Stops sticker can be returned here. Check you're scanning the barcode on the back cover, or pick your book from the list.")
+    : showAlert(I.qr(34), "That code isn't one of ours", 'Open the Between Stops app, open your reservation and hold the QR code up to the camera.');
   if (p.type === 'return') return startReturn(p.book);
   if (returning) return showAlert(I.ret(34), "That's a reservation pass", 'To return a book, scan the code on its back cover. To collect, go back and scan your pass on the main screen.');
   if (p.type === 'quick') return collectQuick(p.pin);
@@ -1309,7 +1489,7 @@ function collect({ code, book:bookId, name, exp }){
   if (!bookId || !book(bookId)) return showAlert(I.grid(34), "We couldn't find that code", 'Check the six digit code in the app and try again. Codes are only valid for 30 minutes.');
   const s = slotOf(bookId);
   if (!s) return notHere(bookId);
-  if (s.hold && s.hold !== code) return showAlert(I.lock(34), 'Someone else has this one', `${book(bookId).title} is held for another reader. Browse the shelf for something else to read.`, bookId);
+  if (s.hold && s.hold !== code) return showAlert(I.lock(34), 'Someone else has this one', `${book(bookId).title} is reserved for another reader. Browse the shelf for something else to read.`, bookId);
   if (code) S.reservations.push({ code, book:bookId, name:name || 'Reader', exp: Date.now() + 30*60e3 });
   go('unlock', { book:bookId, slot:s.id, name:name || null, code:code || null });
 }
@@ -1321,13 +1501,15 @@ function completeCollect(job){
   s.book = null; s.hold = null;
   const r = job.code && S.reservations.find(r => r.code === job.code);
   if (r) r.collected = true;
-  S.loans[job.book] = job.name || 'Reader';
+  S.loans[job.book] = { name: job.name || 'Reader', at: Date.now() };
   book(job.book).trips.unshift([`Collected from car ${CAR} at ${station(S.nextStop - 1)}${job.name ? ' by ' + job.name : ''}`, 'Just now']);
   S.borrowed++;
 }
 function startReturn(id){
-  if (!book(id)) return showAlert(I.book(34), "We don't know that book", 'Only books with a Between Stops sticker can go in the kiosk.');
-  if (slotOf(id)) return showAlert(I.book(34), 'That book is already on the shelf', "Looks like it's already in one of our doors. Try scanning a different book.", id);
+  // Check the scanned book against what's actually out on loan, so the right book gets named.
+  if (!book(id)) return showAlert(I.book(34), "We don't recognise that barcode", "Only books with a Between Stops sticker can be returned here. Check you're scanning the barcode on the back cover, or pick your book from the list.");
+  if (slotOf(id)) return showAlert(I.book(34), 'That book is already on the shelf', `${book(id).title} is already in one of our doors. Try scanning the book you borrowed.`, id);
+  if (!S.loans[id]) return showAlert(I.book(34), "That book isn't out on loan", `Our records don't show ${book(id).title} as borrowed. Pick your book from the list, or ask the guard for help.`, id);
   if (!doorForReturn()) return showAlert(I.door(34), 'This shelf is full', 'Every door is in use. Car 5 has a library too, or keep it for your next trip.');
   go('place', id);
 }
@@ -1367,6 +1549,9 @@ const ACTIONS = {
     } else if (d.t === 'page'){
       R.page = d.k === 'del' ? R.page.slice(0, -1) : d.k === 'clear' ? '' : (R.page.length < 4 ? (R.page + d.k).replace(/^0+/, '') : R.page);
       updatePage();
+    } else if (d.t === 'barcode'){
+      BC = d.k === 'del' ? BC.slice(0, -1) : d.k === 'clear' ? '' : (BC.length < 13 ? BC + d.k : BC);
+      updateBC();
     } else if (d.t === 'pin'){
       if (d.k === 'del') pin = pin.slice(0, -1); else if (d.k === 'clear') pin = ''; else if (pin.length < 4) pin += d.k;
       $$('#dots i').forEach((dot, i) => dot.classList.toggle('on', i < pin.length));
@@ -1395,13 +1580,18 @@ const ACTIONS = {
       S.returned++; S.km += 14;
       const door = doorEl(R.slot);
       $('.arrow', door)?.remove();
-      $('.cav', door).innerHTML = cover(b, Math.round(138 * .62), false);
+      $('.cav', door).innerHTML = cover(b, Math.round(130 * .62), false);
       $('.led', door).className = 'led ok';
       setTimeout(() => { door.classList.remove('open'); chime([392, 330], .08); }, 250);
       setTimeout(() => { if (my === runId) setPhase('choice'); }, 1300);
     }, 450);
   },
   phase(d){ setPhase(d.p); },
+  barcode(){ barcodeEntry(); },
+  'bc-go'(){ const code = BC; closeOverlay(); handleScan(code, true); },
+  'pick-return'(d){ startReturn(d.id); },
+  tour(){ tour(0); },
+  'tour-go'(d){ tour(+d.i); },
   thank(d){ thank(d.o); },
   star(d){
     R.stars = +d.n;
@@ -1434,7 +1624,7 @@ const ACTIONS = {
     persist();
     thank('saved', { page:p });
   },
-  genre(d){ genre = d.g; $$('.gchip').forEach(c => c.classList.toggle('on', c.dataset.g === genre)); $('#grid').innerHTML = gridHtml(); },
+  genre(d){ genre = d.g; $$('.gchip').forEach(c => c.classList.toggle('on', c.dataset.g === genre)); $('#grid').innerHTML = gridHtml(); $('#scope').textContent = scopeText(); },
   detail(d){ openDetail(d.id); },
   appqr(d){ openDetail(d.id, !$('.appqr')); },
   borrow(d){ const s = slotOf(d.id); if (s && !s.hold) go('unlock', { book:d.id, slot:s.id, name:null, code:null }); },

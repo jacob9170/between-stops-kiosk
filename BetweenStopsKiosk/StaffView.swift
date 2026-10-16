@@ -73,7 +73,7 @@ struct StaffView: View {
                 }
                 HStack(spacing: 16) {
                     legend(Color(hex: 0x3DDC97), "Ready")
-                    legend(K.t1, "Held")
+                    legend(K.t1, "Reserved")
                     legend(K.line, "Empty")
                     legend(K.yellow, "Open")
                 }

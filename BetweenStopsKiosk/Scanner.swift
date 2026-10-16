@@ -96,7 +96,6 @@ final class ScannerUIView: UIView, AVCaptureMetadataOutputObjectsDelegate {
 /// otherwise a looping animation of a phone being held up.
 struct Viewfinder: View {
     @Environment(KioskStore.self) private var store
-    var hint: String
     var expectingReturn = false
     @State private var sweep = false
     @State private var pulse = false
@@ -130,11 +129,7 @@ struct Viewfinder: View {
             }
 
             VStack {
-                Text(hint)
-                    .font(.k(17, .bold))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(.black.opacity(0.45), in: Capsule())
+                CameraStatus(returning: expectingReturn)
                     .padding(.top, 16)
                 Spacer()
             }
@@ -180,7 +175,7 @@ struct PhoneHoldAnimation: View {
                             HStack(spacing: 2) { ForEach(0..<18, id: \.self) { i in
                                 Rectangle().fill(.black).frame(width: i % 3 == 0 ? 3 : 1.5, height: 40)
                             } }
-                            Text("9780000000130").font(.system(size: 9).monospaced())
+                            Text("9780640017811").font(.system(size: 9).monospaced())
                         }
                         .padding(8).background(.white, in: RoundedRectangle(cornerRadius: 4))
                     }
@@ -268,5 +263,40 @@ struct DemoScanTray: View {
             .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(PressStyle())
+    }
+}
+
+/// Tells the reader whether the kiosk is ready to scan, rather than leaving them guessing.
+struct CameraStatus: View {
+    @Environment(KioskStore.self) private var store
+    var returning = false
+    @State private var ping = false
+
+    private var live: Bool {
+        guard store.hasCamera else { return false }
+        let auth = AVCaptureDevice.authorizationStatus(for: .video)
+        return auth == .authorized || auth == .notDetermined
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(live ? Color(hex: 0x3DDC97) : K.t1)
+                .frame(width: 10, height: 10)
+                .overlay {
+                    if live {
+                        Circle().stroke(Color(hex: 0x3DDC97), lineWidth: 2)
+                            .scaleEffect(ping ? 2.6 : 1).opacity(ping ? 0 : 0.8)
+                    }
+                }
+            Text(live
+                 ? (returning ? "Camera ready · scanning for a barcode" : "Camera ready · scanning for your QR code")
+                 : (returning ? "Camera unavailable · pick your book or type the barcode" : "Camera unavailable · use a demo pass or type your code"))
+                .font(.k(17, .bold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(.black.opacity(0.55), in: Capsule())
+        .onAppear { withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { ping = true } }
     }
 }

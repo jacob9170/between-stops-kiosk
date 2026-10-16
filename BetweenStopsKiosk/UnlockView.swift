@@ -20,15 +20,29 @@ struct UnlockView: View {
     private let doneTimeout: TimeInterval = 8
 
     private var book: Book { store.book(job.bookID)! }
+    private var stepIndex: Int {
+        switch phase {
+        case .checking: 0
+        case .opening: 1
+        case .open: 2
+        case .done: 3
+        }
+    }
     /// Page this reader saved last time they returned this book, if any.
     private var savedPage: Int? { store.bookmark(reader: job.name, book: job.bookID) }
     private var greeting: String { job.name.map { "Hi \($0)" } ?? "Good choice" }
 
     var body: some View {
         GeometryReader { geo in
-            let cell = min((geo.size.height - 200) / 3.96, (geo.size.width * 0.56 - 72) / 4)
+            let cell = min((geo.size.height - 280) / 3.96, (geo.size.width * 0.56 - 72) / 4)
             ZStack {
                 LinearGradient(colors: [K.ink, Color(hex: 0x0F141F)], startPoint: .top, endPoint: .bottom)
+
+                VStack {
+                    StepsBar(labels: Catalog.collectSteps, current: stepIndex)
+                        .padding(.top, 34)
+                    Spacer()
+                }
 
                 HStack(spacing: 48) {
                     VStack(spacing: 18) {
@@ -44,6 +58,7 @@ struct UnlockView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 48)
+                .padding(.top, 60)
 
                 if confetti { Confetti(origin: .init(x: 0.72, y: 0.4)) }
             }
@@ -145,9 +160,9 @@ struct UnlockView: View {
                     funFact("clock", book.readTime.replacingOccurrences(of: "About ", with: ""), "to read")
                 }
                 HStack(spacing: 18) {
-                    Button("Done") { store.go(.home) }
-                        .buttonStyle(KioskButtonStyle(kind: .white))
-                        .frame(width: 220)
+                    Button("Done, back to home") { store.go(.home) }
+                        .buttonStyle(KioskButtonStyle(kind: .yellow))
+                        .frame(width: 300)
                     CountdownRing(start: doneAt, total: doneTimeout, size: 60, color: .white, track: .white.opacity(0.15))
                 }
                 .padding(.top, 4)

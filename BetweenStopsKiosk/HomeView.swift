@@ -16,16 +16,26 @@ struct HomeView: View {
                     .opacity(shown ? 1 : 0)
 
                 VStack(spacing: 16) {
+                    // Borrowing without a phone comes first, so walk-up readers find it straight away.
+                    browseTile
+                        .entrance(shown, delay: 0.05)
                     Tile(symbol: "arrow.uturn.down", tint: K.yellow, title: "Return a book",
                          subtitle: "Finished? Pop it back on the shelf") { store.go(.returnBook(nil)) }
-                        .entrance(shown, delay: 0.05)
-                    browseTile
                         .entrance(shown, delay: 0.12)
                     Tile(symbol: "questionmark", tint: K.grey, title: "How it works",
                          subtitle: "Help, larger text and staff assist") { store.go(.help) }
                         .entrance(shown, delay: 0.19)
+                    Button { withAnimation(.spring) { store.showTour = true } } label: {
+                        Label("New here? Take the 30 second tour", systemImage: "sparkles")
+                            .font(.k(18, .bold)).foregroundStyle(K.blue)
+                            .frame(maxWidth: .infinity).frame(height: 54)
+                            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(K.line, style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
+                    }
+                    .buttonStyle(PressStyle())
+                    .entrance(shown, delay: 0.24)
                     todayStrip
-                        .entrance(shown, delay: 0.26)
+                        .entrance(shown, delay: 0.28)
                 }
                 .frame(width: 420)
             }
@@ -40,15 +50,27 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Collect your book").font(.k(40, .bold))
-                    Text("Hold the QR code from the Between Stops app up to the camera.")
+                    Text("Have a pass? Scan it here").font(.k(40, .bold))
+                    Text("Hold the QR code from your phone up to the camera. Everything else happens here at the kiosk.")
                         .font(.k(19)).foregroundStyle(.white.opacity(0.7))
+                    HStack(spacing: 10) {
+                        ForEach(Array(["Scan pass", "Door opens", "Take your book"].enumerated()), id: \.offset) { i, s in
+                            if i > 0 { Text("→").foregroundStyle(.white.opacity(0.35)) }
+                            HStack(spacing: 6) {
+                                Text("\(i + 1)").font(.k(13, .bold)).foregroundStyle(K.ink)
+                                    .frame(width: 24, height: 24).background(K.yellow, in: Circle())
+                                Text(s)
+                            }
+                        }
+                    }
+                    .font(.k(16, .bold)).foregroundStyle(.white.opacity(0.8))
+                    .padding(.top, 6)
                 }
                 Spacer()
             }
             .foregroundStyle(.white)
 
-            Viewfinder(hint: store.hasCamera ? "Scanning for your QR code" : "Point your pass here")
+            Viewfinder()
                 .frame(maxHeight: .infinity)
 
             if !store.hasCamera || store.showDemoPasses {
@@ -80,9 +102,14 @@ struct HomeView: View {
                 }
                 .frame(width: 76, height: 76)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Browse the shelf").font(.k(24, .bold))
-                    Text("\(store.availableCount) books ready to borrow, no app needed")
-                        .font(.k(16)).foregroundStyle(K.muted)
+                    Text("Browse the shelf").font(.k(24, .bold)).lineLimit(1)
+                    Text("\(store.availableCount) books ready to borrow now")
+                        .font(.k(16)).foregroundStyle(K.muted).lineLimit(1)
+                    Label("No phone or reservation needed", systemImage: "checkmark")
+                        .font(.k(13, .bold)).foregroundStyle(K.green)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(K.greenSoft, in: Capsule())
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.system(size: 20, weight: .bold)).foregroundStyle(K.line)

@@ -11,11 +11,18 @@ struct HelpView: View {
             TopBar()
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
-                    ScreenTitle(title: "How it works", subtitle: "A free library that lives on the train. Take a book, leave a book.")
+                    HStack(alignment: .bottom) {
+                        ScreenTitle(title: "How it works", subtitle: "A free library that lives on the train. Take a book, leave a book.")
+                        Button { withAnimation(.spring) { store.showTour = true } } label: {
+                            Label("Take the step-by-step tour", systemImage: "sparkles")
+                        }
+                        .buttonStyle(KioskButtonStyle(kind: .ink, height: 64))
+                        .frame(width: 360)
+                    }
 
                     HStack(spacing: 18) {
                         StepCard(n: 1, symbol: "iphone.gen3", title: "Reserve in the app",
-                                 text: "Find a library train and hold a book for 30 minutes.", tint: K.blue)
+                                 text: "Find a library train and reserve a book. We keep it for you for 30 minutes.", tint: K.blue)
                             .entrance(shown, delay: 0.0)
                         StepCard(n: 2, symbol: "qrcode.viewfinder", title: "Scan it here",
                                  text: "Hold your QR code up to the camera on the home screen.", tint: K.yellow)

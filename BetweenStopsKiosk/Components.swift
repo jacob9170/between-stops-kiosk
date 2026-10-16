@@ -320,3 +320,45 @@ struct Stars: View {
         .accessibilityLabel(String(format: "%.1f out of 5 stars", value))
     }
 }
+
+// MARK: - Step indicator
+
+/// "Scan your pass → Door opens → Take your book". Shows readers that everything from here happens at the kiosk.
+struct StepsBar: View {
+    let labels: [String]
+    let current: Int
+    var dark = true
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { i, label in
+                if i > 0 {
+                    Capsule().fill(i <= current ? Color(hex: 0x3DDC97) : line).frame(width: 56, height: 2)
+                }
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle().fill(i < current ? Color(hex: 0x3DDC97) : .clear)
+                        Circle().stroke(i < current ? Color(hex: 0x3DDC97) : i == current ? accent : line, lineWidth: 2)
+                        if i < current {
+                            Image(systemName: "checkmark").font(.system(size: 15, weight: .heavy)).foregroundStyle(K.ink)
+                        } else {
+                            Text("\(i + 1)").font(.k(16, .bold)).foregroundStyle(i == current ? accent : faded)
+                        }
+                    }
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(i == current ? accent.opacity(0.18) : .clear).padding(-5))
+                    Text(label).font(.k(17, .bold))
+                        .foregroundStyle(i == current ? strong : i < current ? strong.opacity(0.85) : faded)
+                }
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: current)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(min(current + 1, labels.count)) of \(labels.count): \(labels[min(current, labels.count - 1)])")
+    }
+
+    private var accent: Color { dark ? K.yellow : K.ink }
+    private var strong: Color { dark ? .white : K.ink }
+    private var faded: Color { dark ? .white.opacity(0.45) : K.muted }
+    private var line: Color { dark ? .white.opacity(0.2) : K.line }
+}

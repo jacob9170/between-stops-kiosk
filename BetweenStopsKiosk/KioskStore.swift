@@ -19,7 +19,8 @@ final class KioskStore {
     var openDoors: Set<String> = []
 
     // Accounts
-    var loans: [String: String] = Catalog.initialLoans
+    var loans: [String: Loan] = Catalog.initialLoans()
+    var showTour = false
     var bookmarks: [String: [String: Int]] = Catalog.initialBookmarks
 
     // Settings
@@ -63,6 +64,7 @@ final class KioskStore {
     func go(_ r: Route) {
         touch()
         alert = nil
+        showTour = false
         withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) { route = r }
     }
 
@@ -111,8 +113,13 @@ final class KioskStore {
     func handleScan(_ raw: String, expectingReturn: Bool = false) {
         touch()
         guard let payload = ScanPayload.parse(raw, books: books) else {
-            showAlert(KioskAlert(symbol: "qrcode", title: "That code isn't one of ours",
-                                 message: "Open the Between Stops app, tap your reservation and hold the QR code up to the camera."))
+            if expectingReturn {
+                showAlert(KioskAlert(symbol: "barcode", title: "We don't recognise that barcode",
+                                     message: "Only books with a Between Stops sticker can be returned here. Check you're scanning the barcode on the back cover, or pick your book from the list."))
+            } else {
+                showAlert(KioskAlert(symbol: "qrcode", title: "That code isn't one of ours",
+                                     message: "Open the Between Stops app, open your reservation and hold the QR code up to the camera."))
+            }
             return
         }
         switch payload {
@@ -157,7 +164,7 @@ final class KioskStore {
         guard let s = slot(holding: bookID) else { return notHere(bookID) }
         if let hold = s.hold, hold != code {
             return showAlert(KioskAlert(symbol: "lock.fill", title: "Someone else has this one",
-                                        message: "\(book(bookID)!.title) is held for another reader. Browse the shelf for something else to read.",
+                                        message: "\(book(bookID)!.title) is reserved for another reader. Browse the shelf for something else to read.",
                                         bookID: bookID))
         }
         if let code {
@@ -206,7 +213,7 @@ final class KioskStore {
         if let code = job.code, let r = reservations.firstIndex(where: { $0.code == code }) {
             reservations[r].collected = true
         }
-        loans[job.bookID] = job.name ?? "Reader"
+        loans[job.bookID] = Loan(name: job.name ?? "Reader", at: Date())
         if let b = books.firstIndex(where: { $0.id == job.bookID }) {
             books[b].trips.insert(Trip(what: "Collected from car \(carNumber) at \(currentStation)\(job.name.map { " by \($0)" } ?? "")", when: "Just now"), at: 0)
         }
@@ -215,14 +222,19 @@ final class KioskStore {
 
     // MARK: Returns
 
+    /// Checks the scanned book against what's actually out on loan, so the right book gets named.
     func startReturn(_ bookID: String) {
-        guard book(bookID) != nil else {
-            return showAlert(KioskAlert(symbol: "barcode", title: "We don't know that book",
-                                        message: "Only books with a Between Stops sticker can go in the kiosk."))
+        guard let b = book(bookID) else {
+            return showAlert(KioskAlert(symbol: "barcode", title: "We don't recognise that barcode",
+                                        message: "Only books with a Between Stops sticker can be returned here. Check you're scanning the barcode on the back cover, or pick your book from the list."))
         }
         if slot(holding: bookID) != nil {
             return showAlert(KioskAlert(symbol: "books.vertical.fill", title: "That book is already on the shelf",
-                                        message: "Looks like it's already in one of our doors. Try scanning a different book.", bookID: bookID))
+                                        message: "\(b.title) is already in one of our doors. Try scanning the book you borrowed.", bookID: bookID))
+        }
+        guard loans[bookID] != nil else {
+            return showAlert(KioskAlert(symbol: "books.vertical", title: "That book isn't out on loan",
+                                        message: "Our records don't show \(b.title) as borrowed. Pick your book from the list, or ask the guard for help.", bookID: bookID))
         }
         guard !emptySlots.isEmpty else {
             return showAlert(KioskAlert(symbol: "tray.full.fill", title: "This shelf is full",
@@ -275,6 +287,10 @@ final class KioskStore {
     /// The book is back on the shelf and no longer out with anyone.
     func endLoan(_ bookID: String) { loans[bookID] = nil }
 
+    var loansNewestFirst: [(id: String, loan: Loan)] {
+        loans.map { ($0.key, $0.value) }.sorted { $0.1.at > $1.1.at }
+    }
+
     // MARK: Staff
 
     func resetDemo() {
@@ -282,7 +298,7 @@ final class KioskStore {
         slots = Catalog.initialSlots()
         reservations = Catalog.initialReservations()
         openDoors = []
-        loans = Catalog.initialLoans
+        loans = Catalog.initialLoans()
         bookmarks = Catalog.initialBookmarks
         borrowedToday = 37
         returnedToday = 29

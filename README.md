@@ -15,13 +15,15 @@ Open the pass maker on your phone, reserve a book, then hold the QR up to the ki
 
 ## Features
 
-- **Zero tap collecting**: the camera is always scanning on the home screen
+- **Zero tap collecting**: the camera is always scanning on the home screen, with an on-screen camera status
+- **Step indicator** on collect (Scan your pass → Door opens → Take your book) and return
 - **6 digit code or 4 digit quick code** entry for when the QR won't scan
 - **Locker animation**: doors light up in sequence, the right one swings open and the book flies out
-- **Returns** with a choice at the end:
-  - *Finished it*: star rating, tags and a written review, shown to the next reader
-  - *Still reading*: save the page you're up to, and next time you collect it the kiosk says "Jump back in at page 142"
-- **Browse the shelf** with ratings, reviews, the book's journey, and *Surprise me*
+- **Returns** check the scanned book against what's out on loan and name it on screen ("You returned Orchard Hours"). Scan the barcode, pick from the list of books on loan, or type the 13 digit number. Then:
+  - *I've finished reading it*: star rating, tags and a written review, shown to the next reader
+  - *I'm still reading it*: save the page you're up to, and next time you collect it the kiosk says "Jump back in at page 142"
+- **Browse the shelf** (no phone or reservation needed) with fuller descriptions, ratings, reviews, the book's journey, and *Surprise me* that respects the chosen category
+- **Step-by-step tour** from Home or How it works, with Back, Next and Skip
 - Live **next stop** bar, **larger text** mode, call the guard, report a problem
 - **Idle timeout** back to an animated attract screen
 - **Crew mode**: hold the logo for 2 seconds, PIN `2468`

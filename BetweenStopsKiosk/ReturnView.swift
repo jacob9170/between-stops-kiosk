@@ -14,45 +14,105 @@ struct ReturnView: View {
         }
     }
 
-    private var scanStep: some View {
-        VStack(spacing: 0) {
-            TopBar()
-            HStack(spacing: 28) {
-                VStack(spacing: 16) {
-                    Viewfinder(hint: "Hold the back cover up to the camera", expectingReturn: true)
-                    if !store.hasCamera || store.showDemoPasses {
-                        DemoScanTray(returning: true)
-                    }
-                }
-                .padding(24)
-                .background(K.ink, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+    @State private var typingBarcode = false
+    @State private var barcode = ""
 
-                VStack(alignment: .leading, spacing: 26) {
-                    ScreenTitle(title: "Return a book", subtitle: "Thanks for passing it on.")
-                    step(1, "Find the barcode", "It's on the Between Stops sticker on the back cover.")
-                    step(2, "Hold it up to the camera", "We'll open an empty door for you.")
-                    step(3, "Pop it in and leave a note", "The next reader sees what you thought.")
-                    Spacer()
-                    Label("Any Between Stops book can go in any library train, not just the one you got it from.",
-                          systemImage: "tram.fill")
-                        .font(.k(17)).foregroundStyle(K.muted)
-                        .padding(18)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    private var scanStep: some View {
+        ZStack {
+            VStack(spacing: 0) {
+                TopBar()
+                StepsBar(labels: Catalog.returnSteps, current: 0, dark: false)
+                    .padding(.top, 14)
+                HStack(spacing: 28) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Scan the book you're returning").font(.k(32, .bold))
+                            Text("Hold the barcode on the back cover up to the camera.")
+                                .font(.k(18)).foregroundStyle(.white.opacity(0.7))
+                        }
+                        .foregroundStyle(.white)
+                        Viewfinder(expectingReturn: true)
+                        Button { barcode = ""; withAnimation(.spring) { typingBarcode = true } } label: {
+                            Label("Type the barcode number instead", systemImage: "circle.grid.3x3.fill")
+                        }
+                        .buttonStyle(KioskButtonStyle(kind: .white, height: 64))
+                    }
+                    .padding(24)
+                    .background(K.ink, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        ScreenTitle(title: "Or pick your book", subtitle: "Books out on loan right now, most recent first.")
+                        ScrollView {
+                            VStack(spacing: 10) {
+                                ForEach(store.loansNewestFirst, id: \.id) { entry in
+                                    if let b = store.book(entry.id) { loanRow(b, entry.loan) }
+                                }
+                                if store.loans.isEmpty {
+                                    Text("No books are out on loan right now.").font(.k(18)).foregroundStyle(K.muted)
+                                }
+                            }
+                        }
+                    }
+                    .frame(width: 420)
                 }
-                .frame(width: 400)
+                .padding(28)
             }
-            .padding(28)
+            if typingBarcode { barcodeSheet.transition(.opacity).zIndex(5) }
         }
     }
 
-    private func step(_ n: Int, _ title: String, _ detail: String) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            Text("\(n)").font(.k(22, .bold)).foregroundStyle(K.ink)
-                .frame(width: 46, height: 46).background(K.yellow, in: Circle())
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.k(22, .bold))
-                Text(detail).font(.k(17)).foregroundStyle(K.muted)
+    private func loanRow(_ b: Book, _ loan: Loan) -> some View {
+        Button { store.startReturn(b.id) } label: {
+            HStack(spacing: 14) {
+                BookCover(book: b, width: 48, showText: false)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(b.title).font(.k(18, .bold)).foregroundStyle(K.ink).multilineTextAlignment(.leading)
+                    Text("Borrowed by \(loan.name) · \(loan.ago)").font(.k(15)).foregroundStyle(K.muted)
+                }
+                Spacer(minLength: 0)
+                if loan.isFresh {
+                    Text("Just borrowed").font(.k(13, .bold)).foregroundStyle(K.ink)
+                        .padding(.horizontal, 10).padding(.vertical, 5).background(K.yellow, in: Capsule())
+                }
+                Image(systemName: "chevron.right").font(.system(size: 17, weight: .bold)).foregroundStyle(K.line)
             }
+            .padding(14)
+            .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(PressStyle())
+    }
+
+    /// Keypad for typing the 13 digit number under the barcode.
+    private var barcodeSheet: some View {
+        ZStack {
+            K.ink.opacity(0.5).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Type the barcode number").font(.k(30, .bold))
+                Text("The 13 digit number printed under the barcode on the back cover.")
+                    .font(.k(18)).foregroundStyle(K.muted)
+                Text(barcode.isEmpty ? "978…" : barcode)
+                    .font(.system(size: 32, weight: .bold).monospacedDigit())
+                    .foregroundStyle(barcode.isEmpty ? K.line : K.ink)
+                    .frame(maxWidth: .infinity).frame(height: 76)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(K.ink, lineWidth: 3))
+                NumberPad(text: $barcode, maxLength: 13, keyHeight: 70)
+                HStack(spacing: 12) {
+                    Button("Cancel") { withAnimation { typingBarcode = false } }
+                        .buttonStyle(KioskButtonStyle(kind: .ghost, height: 60))
+                    Button("Find my book") {
+                        let code = barcode
+                        withAnimation { typingBarcode = false }
+                        store.handleScan(code, expectingReturn: true)
+                    }
+                    .buttonStyle(KioskButtonStyle(kind: .yellow, height: 60))
+                    .disabled(barcode.count != 13)
+                    .opacity(barcode.count == 13 ? 1 : 0.45)
+                }
+            }
+            .padding(32)
+            .frame(width: 480)
+            .background(K.bg, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
         }
     }
 }
@@ -70,6 +130,7 @@ struct PlaceBookView: View {
     @State private var doorOpen = false
     @State private var bookIn = false
     @State private var reader: String?
+    @State private var loan: Loan?
     @State private var thanksAt = Date()
 
     // Review
@@ -86,13 +147,26 @@ struct PlaceBookView: View {
     private var page: Int { Int(pageText) ?? 0 }
     private var pageValid: Bool { page > 0 && page <= book.pages }
     private var savedPage: Int? { store.bookmark(reader: reader, book: book.id) }
+    private var stepIndex: Int {
+        switch phase {
+        case .placing: 1
+        case .choice, .review, .bookmark: 2
+        case .thanks: 3
+        }
+    }
 
     var body: some View {
         GeometryReader { geo in
-            let cell = min((geo.size.height - 200) / 3.96, (geo.size.width * 0.52 - 72) / 4)
+            let cell = min((geo.size.height - 280) / 3.96, (geo.size.width * 0.52 - 72) / 4)
             ZStack {
                 LinearGradient(colors: [K.ink, Color(hex: 0x0F141F)], startPoint: .top, endPoint: .bottom)
                     .onTapGesture { typing = false }
+
+                VStack {
+                    StepsBar(labels: Catalog.returnSteps, current: stepIndex)
+                        .padding(.top, 34)
+                    Spacer()
+                }
 
                 if phase == .placing || phase == .thanks {
                     HStack(spacing: 48) {
@@ -109,10 +183,11 @@ struct PlaceBookView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .padding(.horizontal, 48)
+                    .padding(.top, 60)
                 } else {
                     followUp
                         .padding(.horizontal, 56)
-                        .padding(.vertical, 40)
+                        .padding(.top, 100).padding(.bottom, 30)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
 
@@ -121,7 +196,8 @@ struct PlaceBookView: View {
         }
         .ignoresSafeArea(.container)
         .task {
-            reader = store.loans[book.id]
+            loan = store.loans[book.id]
+            reader = loan?.name
             slotID = store.doorForReturn()?.id
             try? await Task.sleep(for: .seconds(0.6))
             AudioServicesPlaySystemSound(1100)
@@ -133,27 +209,40 @@ struct PlaceBookView: View {
 
     private var placingPanel: some View {
         VStack(alignment: .leading, spacing: 20) {
+            // Name the scanned book clearly so the reader can catch a wrong scan before it goes in.
             HStack(spacing: 20) {
-                BookCover(book: book, width: 120)
+                BookCover(book: book, width: 110)
                     .offset(x: bookIn ? -220 : 0)
                     .scaleEffect(bookIn ? 0.4 : 1)
                     .opacity(bookIn ? 0 : 1)
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Found it", systemImage: "checkmark.circle.fill")
-                        .font(.k(17, .bold)).foregroundStyle(Color(hex: 0x3DDC97))
+                    Text("You're returning").font(.k(17, .bold)).foregroundStyle(K.yellow)
                     Text(book.title).font(.serif(30)).foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(book.author).font(.k(18)).foregroundStyle(.white.opacity(0.6))
+                    if let loan {
+                        Text("Borrowed by \(loan.name) · \(loan.ago)").font(.k(15)).foregroundStyle(.white.opacity(0.6))
+                    }
                 }
+                Spacer(minLength: 0)
             }
+            .padding(16)
+            .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             Text("Pop it into door \(slotID ?? "")")
                 .font(.k(40, .bold)).foregroundStyle(.white)
             Text("The glowing door is open. Slide the book in spine first, then tap below.")
                 .font(.k(20)).foregroundStyle(.white.opacity(0.75))
             Button("It's in, close the door") { placed() }
                 .buttonStyle(KioskButtonStyle(kind: .yellow))
-            Button("Cancel") { store.go(.home) }
+            HStack(spacing: 12) {
+                Button { store.go(.returnBook(nil)) } label: {
+                    Text("Not this book? Scan again").lineLimit(1).minimumScaleFactor(0.75)
+                }
                 .buttonStyle(KioskButtonStyle(kind: .ghostDark, height: 60))
+                Button("Cancel") { store.go(.home) }
+                    .buttonStyle(KioskButtonStyle(kind: .ghostDark, height: 60))
+                    .frame(width: 140)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -197,16 +286,15 @@ struct PlaceBookView: View {
         VStack(alignment: .leading, spacing: 22) {
             Text(reader.map { "Thanks, \($0)!" } ?? "Thanks for bringing it back!")
                 .font(.k(22, .bold)).foregroundStyle(K.yellow)
-            Text("Did you finish it?").font(.k(48, .bold)).foregroundStyle(.white)
+            Text("Have you finished reading it?").font(.k(46, .bold)).foregroundStyle(.white)
 
+            // Both answers look the same on purpose, so neither reads as the default.
             HStack(spacing: 18) {
-                ChoiceCard(symbol: "checkmark.seal.fill", title: "Finished it",
-                           subtitle: "Rate it and leave a review for the next reader",
-                           highlighted: true) { go(.review) }
-                ChoiceCard(symbol: "bookmark.fill", title: "Still reading",
-                           subtitle: reader.map { "Save your page to \($0)'s account and jump back in next time" }
-                                ?? "Save your page and jump back in next time",
-                           highlighted: false) {
+                ChoiceCard(symbol: "checkmark.seal.fill", title: "I've finished reading it",
+                           subtitle: "Rate it and leave a review for the next reader") { go(.review) }
+                ChoiceCard(symbol: "bookmark.fill", title: "I'm still reading it",
+                           subtitle: reader.map { "Save your page to \($0)'s account and pick up where you left off" }
+                                ?? "Save your page and pick up where you left off") {
                     pageText = savedPage.map(String.init) ?? ""
                     go(.bookmark)
                 }
@@ -218,9 +306,9 @@ struct PlaceBookView: View {
                     .font(.k(17)).foregroundStyle(.white.opacity(0.6))
             }
 
-            Button("Just return it") { thank(.plain) }
-                .buttonStyle(KioskButtonStyle(kind: .ghostDark, height: 60))
-                .frame(width: 260)
+            Button("Skip, just return it") { thank(.plain) }
+                .font(.k(18, .bold)).foregroundStyle(.white.opacity(0.7))
+                .buttonStyle(PressStyle())
         }
     }
 
@@ -273,7 +361,7 @@ struct PlaceBookView: View {
             }
 
             HStack(spacing: 14) {
-                Button("Skip") { thank(.plain) }
+                Button("Back") { go(.choice) }
                     .buttonStyle(KioskButtonStyle(kind: .ghostDark, height: 66))
                     .frame(width: 180)
                 Button { submitReview() } label: {
@@ -325,7 +413,7 @@ struct PlaceBookView: View {
                 Button {
                     go(.review)
                 } label: {
-                    Label("Actually, I finished it. Review it", systemImage: "checkmark.seal")
+                    Label("Actually, I've finished it. Review it", systemImage: "checkmark.seal")
                         .font(.k(17, .bold)).foregroundStyle(K.yellow)
                 }
                 .buttonStyle(PressStyle())
@@ -370,30 +458,42 @@ struct PlaceBookView: View {
             .foregroundStyle(K.ink)
             .frame(width: 90, height: 90).background(K.yellow, in: Circle())
 
+            Label {
+                Text("You returned ") + Text(book.title).foregroundStyle(.white)
+            } icon: {
+                Image(systemName: "checkmark")
+            }
+            .font(.k(22, .bold)).foregroundStyle(K.yellow)
+
             switch outcome {
             case .plain:
                 Text("Thanks for passing it on").font(.serif(44)).foregroundStyle(.white)
-                Text("\(book.title) is back on the shelf in door \(slotID ?? ""). It has now travelled \(store.book(book.id)?.km ?? book.km) km.")
+                Text("It's back on the shelf in door \(slotID ?? "") for the next reader. It has now travelled \(store.book(book.id)?.km ?? book.km) km.")
                     .font(.k(21)).foregroundStyle(.white.opacity(0.75)).lineSpacing(3)
             case .reviewed(let n):
                 Text("Thanks for the review!").font(.serif(44)).foregroundStyle(.white)
                 Stars(value: Double(n), size: 30, color: K.yellow)
-                Text("Your \(n) star review is now on \(book.title) for the next reader to see.")
+                Text("Your \(n) star review is now on the book for the next reader to see.")
                     .font(.k(21)).foregroundStyle(.white.opacity(0.75)).lineSpacing(3)
             case .saved(let p):
                 Text("Page \(p) saved").font(.serif(44)).foregroundStyle(.white)
-                Text("It's on \(reader.map { "\($0)'s" } ?? "your") account. Collect \(book.title) again on any train and we'll take you straight back to page \(p).")
+                Text("It's on \(reader.map { "\($0)'s" } ?? "your") account. Collect it again on any train and we'll take you straight back to page \(p).")
                     .font(.k(21)).foregroundStyle(.white.opacity(0.75)).lineSpacing(3)
                 ReadingProgress(page: p, pages: book.pages).frame(maxWidth: 420)
             }
 
+            // Leaving is the likely next step, so Done is the main button and returning another is secondary.
             HStack(spacing: 18) {
-                Button("Return another") { store.go(.returnBook(nil)) }
+                Button("Done, back to home") { store.go(.home) }
                     .buttonStyle(KioskButtonStyle(kind: .yellow))
-                Button("Done") { store.go(.home) }
-                    .buttonStyle(KioskButtonStyle(kind: .white))
+                    .frame(width: 320)
                 CountdownRing(start: thanksAt, total: 10, size: 60, color: .white, track: .white.opacity(0.15))
             }
+            Button { store.go(.returnBook(nil)) } label: {
+                Label("Return another book", systemImage: "arrow.uturn.down")
+                    .font(.k(18, .bold)).foregroundStyle(.white.opacity(0.75))
+            }
+            .buttonStyle(PressStyle())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -449,12 +549,11 @@ struct PlaceBookView: View {
     }
 }
 
-/// One of the two big "Did you finish it?" answers.
+/// One of the two "Have you finished reading it?" answers. Both share one style so neither looks pre-selected.
 private struct ChoiceCard: View {
     let symbol: String
     let title: String
     let subtitle: String
-    let highlighted: Bool
     let action: () -> Void
     @State private var bounce = 0
 
@@ -462,25 +561,26 @@ private struct ChoiceCard: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 12) {
                 Image(systemName: symbol)
-                    .font(.system(size: 40, weight: .semibold))
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(K.ink)
                     .symbolEffect(.bounce, value: bounce)
+                    .frame(width: 64, height: 64)
+                    .background(K.yellow, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                 Spacer()
-                Text(title).font(.k(30, .bold))
+                Text(title).font(.k(28, .bold))
                 Text(subtitle).font(.k(17)).opacity(0.75)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(highlighted ? K.ink : .white)
+            .foregroundStyle(.white)
             .padding(26)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(highlighted ? K.yellow : .white.opacity(0.08),
-                        in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(highlighted ? .clear : .white.opacity(0.15), lineWidth: 2))
+            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(.white.opacity(0.2), lineWidth: 2))
         }
         .buttonStyle(PressStyle())
         .task {
-            try? await Task.sleep(for: .seconds(highlighted ? 0.4 : 0.8))
+            try? await Task.sleep(for: .seconds(0.6))
             bounce += 1
         }
     }

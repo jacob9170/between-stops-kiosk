@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
 :root{
   --ink:#182033; --yellow:#FFC72C; --blue:#2D5BA8; --grey:#E9ECF1; --bg:#F4F6F9;
@@ -75,6 +76,15 @@ label.name input{flex:1;border:0;background:none;font-size:16px;outline:none;hei
 .small-qr svg{width:100%;height:auto;display:block}
 .small-qr b{display:block;font-size:14px;margin-top:6px}
 .small-qr span{font-size:12px;color:var(--muted)}
+.rbook{background:var(--white);border-radius:20px;padding:16px;margin-top:12px}
+.rbook.mine{border:3px solid var(--yellow)}
+.rbook .flag{display:inline-block;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--yellow);margin-bottom:8px}
+.rbook .t{font-weight:700;font-size:17px}
+.rbook .a{font-size:14px;color:var(--muted);margin-top:2px}
+.rbook .bar{margin-top:12px;background:#fff;text-align:center}
+.rbook .bar svg{width:100%;max-width:300px;height:auto;margin:0 auto}
+.rbook details{margin-top:8px;font-size:14px;color:var(--blue);font-weight:700}
+.rbook details svg{width:150px;height:150px;margin:10px auto 0;display:block}
 .foot{font-size:13px;color:var(--muted);text-align:center;margin-top:26px;line-height:1.5}
 .hide{display:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -117,9 +127,9 @@ label.name input{flex:1;border:0;background:none;font-size:16px;outline:none;hei
 
   <!-- Return -->
   <section id="return" class="hide">
-    <h2>Book barcodes</h2>
-    <p class="sub">Every Between Stops book has a sticker on the back. Show one of these to the kiosk on the Return screen and a door will open for it.</p>
-    <div class="small-qr" id="returns"></div>
+    <h2>Return a book</h2>
+    <p class="sub">Every Between Stops book has a barcode sticker on the back. On the kiosk, tap Return a book, then hold the barcode for the book you borrowed up to the camera.</p>
+    <div id="returns"></div>
   </section>
 
   <p class="foot">Prototype for the Between Stops kiosk.<br>Passes work offline once this page has loaded.</p>
@@ -128,15 +138,15 @@ label.name input{flex:1;border:0;background:none;font-size:16px;outline:none;hei
 <script>
 /* Must match Catalog in the kiosk app. */
 const SHELF = [
-  { id:'signal', num:13,   title:'Signal Failure',              author:'Dana Whitlock', c1:'#C2402A', c2:'#FFF4E8' },
-  { id:'pip', num:14,      title:'Pip and the Night Train',     author:'Hana Lowe',     c1:'#FFC72C', c2:'#182033' },
-  { id:'kettle', num:15,   title:'Everything the Kettle Knows', author:'Rosa Mendes',   c1:'#E8B4BC', c2:'#5A2333' },
-  { id:'birds', num:16,    title:'A Field Guide to City Birds', author:'Tom Ashby',     c1:'#7FA650', c2:'#FFFFFF' },
-  { id:'katoomba', num:17, title:'Last Stop, Katoomba',         author:'Ellie Brandt',  c1:'#3B2F6B', c2:'#FFC72C' },
-  { id:'quiet', num:18,    title:'The Quiet Carriage',          author:'Marcus Lee',    c1:'#182033', c2:'#E9ECF1' },
-  { id:'bread', num:19,    title:'Bread, Mostly',               author:'Lena Fischer',  c1:'#D9A441', c2:'#3A2A12' },
-  { id:'redfern', num:11,  title:'The Long Way to Redfern',     author:'Mae Okafor',    c1:'#2D5BA8', c2:'#FFC72C', held:true },
-  { id:'tides', num:12,    title:'Small Tides',                 author:'Jun Park',      c1:'#1F7A6B', c2:'#F5E6C8', held:true },
+  { id:'signal', num:13, bc:'9780640004118',   title:'Signal Failure',              author:'Dana Whitlock', c1:'#C2402A', c2:'#FFF4E8' },
+  { id:'pip', num:14, bc:'9780640005481',      title:'Pip and the Night Train',     author:'Hana Lowe',     c1:'#FFC72C', c2:'#182033' },
+  { id:'kettle', num:15, bc:'9780640006853',   title:'Everything the Kettle Knows', author:'Rosa Mendes',   c1:'#E8B4BC', c2:'#5A2333' },
+  { id:'birds', num:16, bc:'9780640008222',    title:'A Field Guide to City Birds', author:'Tom Ashby',     c1:'#7FA650', c2:'#FFFFFF' },
+  { id:'katoomba', num:17, bc:'9780640009595', title:'Last Stop, Katoomba',         author:'Ellie Brandt',  c1:'#3B2F6B', c2:'#FFC72C' },
+  { id:'quiet', num:18, bc:'9780640010966',    title:'The Quiet Carriage',          author:'Marcus Lee',    c1:'#182033', c2:'#E9ECF1' },
+  { id:'bread', num:19, bc:'9780640012335',    title:'Bread, Mostly',               author:'Lena Fischer',  c1:'#D9A441', c2:'#3A2A12' },
+  { id:'redfern', num:11, bc:'9780640001377',  title:'The Long Way to Redfern',     author:'Mae Okafor',    c1:'#2D5BA8', c2:'#FFC72C', held:true },
+  { id:'tides', num:12, bc:'9780640002749',    title:'Small Tides',                 author:'Jun Park',      c1:'#1F7A6B', c2:'#F5E6C8', held:true },
 ];
 const DEMOS = [
   { label:"Alex's pass", detail:'Valid reservation', payload:'betweenstops://collect?code=482913&book=redfern&name=Alex' },
@@ -144,11 +154,12 @@ const DEMOS = [
   { label:"Jess's pass", detail:'Expired',           payload:'betweenstops://collect?code=660021&book=signal&name=Jess' },
   { label:"Kim's pass",  detail:'Wrong train',       payload:'betweenstops://collect?code=777314&book=fig&name=Kim' },
 ];
+/* Books already out on loan in the kiosk's demo data. Barcodes are real EAN-13 numbers. */
 const RETURNS = [
-  { label:'Salt and Static',   detail:'Not on a shelf yet', payload:'betweenstops://return?book=salt' },
-  { label:'Orchard Hours',     detail:'Out with Alex',      payload:'betweenstops://return?book=orchard' },
-  { label:'How to Fold a Map', detail:'Out with Priya',     payload:'betweenstops://return?book=map' },
-  { label:'The Fig Tree Club', detail:'From another train', payload:'betweenstops://return?book=fig' },
+  { id:'salt',    title:'Salt and Static',   author:'Priya Raman',  detail:'Out with Alex',  bc:'9780640017811' },
+  { id:'orchard', title:'Orchard Hours',     author:'Sofia Brennan',detail:'Out with Alex',  bc:'9780640016449' },
+  { id:'map',     title:'How to Fold a Map', author:'Noor Haddad',  detail:'Out with Priya', bc:'9780640013707' },
+  { id:'fig',     title:'The Fig Tree Club', author:'Ari Coleman',  detail:'Out with Joel',  bc:'9780640015077' },
 ];
 
 const $ = s => document.querySelector(s);
@@ -172,14 +183,14 @@ function renderBooks(){
     <button class="row${picked===b.id?' on':''}" data-id="${b.id}" ${b.held?'aria-disabled="true"':''}>
       <span class="cov" style="background:${b.c1};--c2:${b.c2}"></span>
       <span><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div></span>
-      <span class="tag${picked===b.id?' go':''}">${b.held ? 'Held' : picked===b.id ? 'Picked' : 'On shelf'}</span>
+      <span class="tag${picked===b.id?' go':''}">${b.held ? 'Reserved' : picked===b.id ? 'Picked' : 'On shelf'}</span>
     </button>`).join('');
   $('#make').disabled = !picked;
 }
 $('#books').addEventListener('click', e => {
   const r = e.target.closest('.row'); if (!r) return;
   const b = SHELF.find(x => x.id === r.dataset.id);
-  if (b.held) { alert(`${b.title} is already held for someone else. Use their demo pass below, or pick another book.`); return; }
+  if (b.held) { alert(`${b.title} is already reserved by someone else, so it's unavailable right now. Use their demo pass below, or pick another book.`); return; }
   picked = b.id; renderBooks();
 });
 
@@ -190,7 +201,7 @@ function showPass(p){
   const payload = `betweenstops://collect?code=${p.code}&book=${p.book}&name=${encodeURIComponent(p.name)}&exp=${Math.floor(p.exp/1000)}&pin=${p.pin}`;
   $('#pass').innerHTML = `
     <div class="top">
-      <div><small>Held for ${esc(p.name)}</small><div class="title">${esc(b.title)}</div><small>${esc(b.author)}</small></div>
+      <div><small>Reserved for ${esc(p.name)}</small><div class="title">${esc(b.title)}</div><small>${esc(b.author)}</small></div>
       <span class="pill">T1</span>
     </div>
     <div class="qr">${qrSvg(payload)}<span class="scan"></span></div>
@@ -198,7 +209,7 @@ function showPass(p){
     <div class="quick"><span><small>Quick code</small><small>Type this on the kiosk if the QR won't scan</small></span><b>${p.pin}</b></div>
     <div class="meta">
       <span><small>Where</small><b>Car 2 kiosk</b></span>
-      <span style="text-align:right"><small>Held for</small><b class="timer" id="timer"></b></span>
+      <span style="text-align:right"><small>Kept for you for</small><b class="timer" id="timer"></b></span>
     </div>`;
   $('#picker').classList.add('hide');
   $('#passView').classList.remove('hide');
@@ -236,12 +247,25 @@ document.querySelectorAll('.seg button').forEach(btn => btn.addEventListener('cl
   document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b === btn));
   $('#collect').classList.toggle('hide', btn.dataset.tab !== 'collect');
   $('#return').classList.toggle('hide', btn.dataset.tab !== 'return');
+  if (btn.dataset.tab === 'return') renderReturns();
 }));
 
 /* Static QR grids */
 const grid = list => list.map(d => `<div>${qrSvg(d.payload, 4)}<b>${esc(d.label)}</b><span>${esc(d.detail)}</span></div>`).join('');
 $('#demos').innerHTML = grid(DEMOS);
-$('#returns').innerHTML = grid(RETURNS);
+function renderReturns(){
+  const p = store.get('bs-pass');
+  const mine = p && SHELF.find(b => b.id === p.book);
+  const list = [...(mine ? [{ ...mine, detail:`Reserved by ${p.name}`, mine:true }] : []), ...RETURNS];
+  $('#returns').innerHTML = list.map((b, i) => `<div class="rbook${b.mine ? ' mine' : ''}">
+    ${b.mine ? '<span class="flag">The book you reserved</span>' : ''}
+    <div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)} · ${esc(b.detail)}</div>
+    <div class="bar"><svg id="bar${i}"></svg></div>
+    <details><summary>Camera won't read the barcode? Show a QR instead</summary>${qrSvg(`betweenstops://return?book=${b.id}`, 4)}</details>
+  </div>`).join('');
+  if (window.JsBarcode) list.forEach((b, i) => { try { JsBarcode(`#bar${i}`, b.bc, { format:'EAN13', height:70, width:2, fontSize:16, margin:8 }); } catch {} });
+}
+renderReturns();
 
 renderBooks();
 const saved = store.get('bs-pass');

@@ -8,15 +8,10 @@ struct BrowseView: View {
     @State private var surprise = false
     @State private var shown = false
 
-    private var list: [Book] {
-        store.booksOnShelf.filter { b in
-            switch genre {
-            case "All": true
-            case "Short reads": b.pages <= 100
-            default: b.genre == genre
-            }
-        }
-    }
+    private var list: [Book] { store.booksOnShelf.filter { Catalog.matches($0, genre: genre) } }
+    private var scope: String { genre == "All" ? "from all available books" : "from \(genre.lowercased()) only" }
+    /// Surprise me only picks from what's on screen: available books in the chosen category.
+    private var surprisePool: [Book] { list.filter { !store.isHeld($0.id) } }
 
     var body: some View {
         ZStack {
@@ -24,11 +19,21 @@ struct BrowseView: View {
                 TopBar()
                 HStack(alignment: .bottom) {
                     ScreenTitle(title: "On the shelf", subtitle: "\(store.availableCount) books ready to borrow right now. Tap one to take a look.")
-                    Button { surprise = true } label: {
-                        Label("Surprise me", systemImage: "dice.fill")
+                    Button {
+                        if surprisePool.isEmpty { store.showToast("No \(genre.lowercased()) books are free right now") }
+                        else { surprise = true }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "dice.fill")
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Surprise me")
+                                Text(scope).font(.k(13, .bold)).opacity(0.7)
+                                    .contentTransition(.opacity)
+                            }
+                        }
                     }
-                    .buttonStyle(KioskButtonStyle(kind: .ink, height: 64))
-                    .frame(width: 230)
+                    .buttonStyle(KioskButtonStyle(kind: .ink, height: 70))
+                    .frame(width: 270)
                 }
                 .padding(.horizontal, 32).padding(.top, 24)
 
@@ -74,7 +79,7 @@ struct BrowseView: View {
                     .zIndex(2)
             }
             if surprise {
-                SurpriseReel(books: store.booksOnShelf.filter { !store.isHeld($0.id) }) { pick in
+                SurpriseReel(books: surprisePool, scope: scope) { pick in
                     surprise = false
                     if let pick { withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { selected = pick } }
                 }
@@ -99,7 +104,7 @@ struct BookTile: View {
                 BookCover(book: book, width: 170)
                     .overlay(alignment: .topTrailing) {
                         if held {
-                            Label("Held", systemImage: "lock.fill")
+                            Label("Reserved", systemImage: "lock.fill")
                                 .font(.k(13, .bold)).foregroundStyle(K.ink)
                                 .padding(.horizontal, 10).padding(.vertical, 6)
                                 .background(K.yellow, in: Capsule())
@@ -110,7 +115,10 @@ struct BookTile: View {
                 Text(book.title).font(.k(18, .bold)).foregroundStyle(K.ink).lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Text(book.author).font(.k(15)).foregroundStyle(K.muted)
-                if let r = book.rating {
+                if held {
+                    Label("Reserved: unavailable right now", systemImage: "lock.fill")
+                        .font(.k(13, .bold)).foregroundStyle(K.muted)
+                } else if let r = book.rating {
                     HStack(spacing: 6) {
                         Stars(value: r, size: 12)
                         Text("(\(book.reviews.count))").font(.k(13)).foregroundStyle(K.muted)
@@ -169,6 +177,15 @@ struct BookDetail: View {
                         }
                         Text(book.blurb).font(.serif(22, .regular)).foregroundStyle(K.ink).lineSpacing(5)
                             .padding(.top, 4)
+                        if !book.about.isEmpty {
+                            Text("About this book").font(.k(20, .bold)).padding(.top, 4)
+                            Text(book.about).font(.k(18)).foregroundStyle(K.ink).lineSpacing(4)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Label("Good for: \(book.goodFor)", systemImage: "checkmark")
+                                .font(.k(16, .bold)).foregroundStyle(K.green)
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(K.greenSoft, in: Capsule())
+                        }
 
                         if let note = live.note {
                             VStack(alignment: .leading, spacing: 8) {
@@ -215,8 +232,8 @@ struct BookDetail: View {
                     if held {
                         VStack(spacing: 8) {
                             Image(systemName: "lock.fill").font(.system(size: 30))
-                            Text("Held for another reader").font(.k(20, .bold)).multilineTextAlignment(.center)
-                            Text("If they don't collect it in 30 minutes it goes back on the shelf.")
+                            Text("Reserved: unavailable right now").font(.k(20, .bold)).multilineTextAlignment(.center)
+                            Text("Someone reserved this book in the app. If they don't collect it within 30 minutes, it goes back on the shelf.")
                                 .font(.k(15)).foregroundStyle(K.muted).multilineTextAlignment(.center)
                         }
                         .padding(20)
@@ -265,6 +282,7 @@ struct BookDetail: View {
 /// Slot machine style picker. Covers whizz past, slow down and land on one.
 struct SurpriseReel: View {
     let books: [Book]
+    var scope = ""
     let done: (Book?) -> Void
     @State private var index = 0
     @State private var landed = false
@@ -274,9 +292,14 @@ struct SurpriseReel: View {
         ZStack {
             K.ink.opacity(0.94).ignoresSafeArea()
             VStack(spacing: 28) {
+                VStack(spacing: 6) {
                 Text(landed ? "How about this one?" : "Picking something for you…")
                     .font(.k(34, .bold)).foregroundStyle(.white)
                     .contentTransition(.opacity)
+                    if !scope.isEmpty {
+                        Text(scope.prefix(1).uppercased() + scope.dropFirst()).font(.k(17, .bold)).foregroundStyle(.white.opacity(0.6))
+                    }
+                }
                 ZStack {
                     RoundedRectangle(cornerRadius: 36, style: .continuous)
                         .fill(.white.opacity(0.06))

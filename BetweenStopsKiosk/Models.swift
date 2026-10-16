@@ -37,6 +37,8 @@ struct Book: Identifiable, Hashable {
     var km: Int
     let barcode: String
     var reviews: [Review] = []
+    var about = ""
+    var goodFor = ""
 
     /// Two digit number used as the start of a 4 digit quick code.
     var quickNumber: Int { Catalog.quickNumbers[id] ?? 0 }
@@ -60,6 +62,21 @@ struct Slot: Identifiable, Hashable {
     let id: String
     var bookID: String?
     var hold: String?
+}
+
+/// Who has a book out, and since when. Lets the kiosk name the right book and reader on return.
+struct Loan: Hashable {
+    let name: String
+    let at: Date
+
+    var ago: String {
+        let mins = Date().timeIntervalSince(at) / 60
+        if mins < 2 { return "just now" }
+        if mins < 60 { return "\(Int(mins)) min ago" }
+        let days = Int(Date().timeIntervalSince(at) / 86_400)
+        return days < 1 ? "earlier today" : days == 1 ? "yesterday" : "\(days) days ago"
+    }
+    var isFresh: Bool { Date().timeIntervalSince(at) < 3600 }
 }
 
 struct Reservation: Identifiable, Hashable {
@@ -150,6 +167,16 @@ enum Catalog {
                            "Redfern", "Central", "Town Hall", "Wynyard", "North Sydney", "Chatswood", "Hornsby"]
 
     static let genres = ["All", "Short reads", "Fiction", "Non-fiction", "Poetry", "Kids"]
+    static let collectSteps = ["Scan your pass", "Door opens", "Take your book"]
+    static let returnSteps = ["Scan your book", "Put it in the door", "Tell us how it went"]
+
+    static func matches(_ b: Book, genre: String) -> Bool {
+        switch genre {
+        case "All": true
+        case "Short reads": b.pages <= 100
+        default: b.genre == genre
+        }
+    }
 
     /// Quick codes are this number followed by two random digits, so the kiosk can
     /// work out the book even when the phone booking hasn't synced yet.
@@ -162,8 +189,27 @@ enum Catalog {
     static let books: [Book] = rawBooks.map { b in
         var b = b
         b.reviews = seedReviews[b.id] ?? []
+        b.about = details[b.id]?.0 ?? ""
+        b.goodFor = details[b.id]?.1 ?? ""
         return b
     }
+
+    /// Fuller descriptions for the book page: what it's about, and who it suits.
+    private static let details: [String: (String, String)] = [
+        "redfern": ("Told in alternating chapters from each sister's seat, it's a quiet, gripping story about family, distance and the routines we hide behind. Short chapters make it easy to read a few stops at a time.", "Long commutes, fans of literary mysteries"),
+        "tides": ("Forty short poems, most under a page, written on the author's own ferry and train rides around Sydney Harbour. Easy to dip in and out of between stations.", "Short trips, reading aloud"),
+        "signal": ("Based on interviews with signallers, drivers and network controllers, it explains how Sydney's rail network runs minute by minute, with diagrams and true stories from big breakdowns.", "Curious commuters, train lovers"),
+        "pip": ("A gently rhyming picture book with bright full-page illustrations of real NSW stations. Takes about five minutes to read aloud.", "Kids 3 to 7, bedtime"),
+        "kettle": ("Each chapter follows a different flatmate through the same chaotic year, from first lease to last goodbye. Light, funny and warm, with a surprisingly moving ending.", "Feel-good reading, short chapters"),
+        "birds": ("Covers 40 common birds you can spot from the train or platform, each with a colour illustration, where to look and what it sounds like.", "Short trips, kids and adults"),
+        "katoomba": ("A slow-burn thriller set over one night on the Blue Mountains line, with twists right up to the final stop.", "Thriller fans, evening trips"),
+        "quiet": ("A clever heist story where every scene takes place in the quiet carriage of a peak-hour train. Sharp dialogue, short chapters and a satisfying final twist.", "Mystery fans, long commutes"),
+        "bread": ("Part memoir, part recipe book, following a year in a small Marrickville bakery. Includes ten simple recipes to try at home.", "Food lovers, slow mornings"),
+        "map": ("Twelve short essays about walks, wrong turns and the joy of not knowing where you are, set in cities around the world.", "Dipping in and out"),
+        "fig": ("A warm chapter book about friendship, change and growing up, with simple language and an illustration every few pages.", "Kids 7 to 10, first chapter books"),
+        "orchard": ("A quiet family drama across four seasons on a NSW apple orchard, about grief, belonging and starting again.", "Slow, thoughtful reading"),
+        "salt": ("An eerie, atmospheric mystery that blends late-night radio, old train lines and a ghost story you can't quite explain.", "Late trips, mystery fans"),
+    ]
 
     private static let seedReviews: [String: [Review]] = [
         "redfern": [Review(stars: 5, text: "Read this between Lidcombe and Central and completely missed my stop.", tags: ["Couldn't put it down"], by: "Sam", when: "Yesterday"),
@@ -186,74 +232,74 @@ enum Catalog {
                      Trip(what: "Read from Epping to Chatswood", when: "3 days ago"),
                      Trip(what: "First shelved at Parramatta", when: "2 weeks ago")],
              note: ReaderNote(text: "Read this between Lidcombe and Central and completely missed my stop. Worth it.", by: "Sam"),
-             km: 412, barcode: "9780000000017"),
+             km: 412, barcode: "9780640001377"),
         Book(id: "tides", title: "Small Tides", author: "Jun Park", genre: "Poetry", pages: 84,
              c1: Color(hex: 0x1F7A6B), c2: Color(hex: 0xF5E6C8), art: .waves,
              blurb: "Short poems about harbours, ferries and the people you only ever see on the morning commute.",
              trips: [Trip(what: "Left on this train by Priya", when: "Today, 7:12am"),
                      Trip(what: "Read on the T4 to Bondi Junction", when: "Last week")],
              note: ReaderNote(text: "Page 31 is the one. Read it twice.", by: "Priya"),
-             km: 138, barcode: "9780000000024"),
+             km: 138, barcode: "9780640002749"),
         Book(id: "signal", title: "Signal Failure", author: "Dana Whitlock", genre: "Non-fiction", pages: 240,
              c1: Color(hex: 0xC2402A), c2: Color(hex: 0xFFF4E8), art: .stripes,
              blurb: "How a city keeps a thousand trains moving every day, and what happens in the control room when one of them stops.",
              trips: [Trip(what: "Left at Central by Marco", when: "Yesterday"),
                      Trip(what: "Read from Penrith to Blacktown", when: "4 days ago")],
-             km: 265, barcode: "9780000000031"),
+             km: 265, barcode: "9780640004118"),
         Book(id: "pip", title: "Pip and the Night Train", author: "Hana Lowe", genre: "Kids", pages: 32,
              c1: Color(hex: 0xFFC72C), c2: Color(hex: 0x182033), art: .dots,
              blurb: "Pip is too excited to sleep, so the night train takes her on a tour of every sleeping town on the line.",
              trips: [Trip(what: "Left on this train by Tom", when: "Yesterday"),
                      Trip(what: "Read at Wynyard", when: "Last week")],
-             km: 74, barcode: "9780000000048"),
+             km: 74, barcode: "9780640005481"),
         Book(id: "kettle", title: "Everything the Kettle Knows", author: "Rosa Mendes", genre: "Fiction", pages: 198,
              c1: Color(hex: 0xE8B4BC), c2: Color(hex: 0x5A2333), art: .circle,
              blurb: "A share house, five flatmates and one kettle that has heard every argument. Funny, warm and quick to get into.",
              trips: [Trip(what: "Left on this train by Jess", when: "Today, 6:40am")],
-             km: 96, barcode: "9780000000055"),
+             km: 96, barcode: "9780640006853"),
         Book(id: "birds", title: "A Field Guide to City Birds", author: "Tom Ashby", genre: "Non-fiction", pages: 96,
              c1: Color(hex: 0x7FA650), c2: .white, art: .bird,
              blurb: "Spot the ibis, the noisy miner and the currawong from the train window. Pocket sized and great for short trips.",
              trips: [Trip(what: "Left on this train by Alex", when: "2 days ago"),
                      Trip(what: "Read at Lidcombe", when: "Last week")],
-             km: 187, barcode: "9780000000062"),
+             km: 187, barcode: "9780640008222"),
         Book(id: "katoomba", title: "Last Stop, Katoomba", author: "Ellie Brandt", genre: "Fiction", pages: 288,
              c1: Color(hex: 0x3B2F6B), c2: Color(hex: 0xFFC72C), art: .moon,
              blurb: "A missed connection, a mountain fog and a stranger who seems to know exactly where the night is going.",
              trips: [Trip(what: "Left on this train by Ana", when: "Yesterday")],
-             km: 54, barcode: "9780000000079"),
+             km: 54, barcode: "9780640009595"),
         Book(id: "quiet", title: "The Quiet Carriage", author: "Marcus Lee", genre: "Fiction", pages: 276,
              c1: Color(hex: 0x182033), c2: Color(hex: 0xE9ECF1), art: .lines,
              blurb: "Nobody is allowed to talk in the quiet carriage, which makes it the perfect place to plan something.",
              trips: [Trip(what: "Left on this train by Kim", when: "Today, 7:30am")],
-             km: 211, barcode: "9780000000086"),
+             km: 211, barcode: "9780640010966"),
         Book(id: "bread", title: "Bread, Mostly", author: "Lena Fischer", genre: "Non-fiction", pages: 198,
              c1: Color(hex: 0xD9A441), c2: Color(hex: 0x3A2A12), art: .circle,
              blurb: "A baker writes about early starts, sourdough and the regulars who keep a small shop going.",
              trips: [Trip(what: "Left on this train by Ben", when: "Yesterday")],
-             km: 129, barcode: "9780000000093"),
+             km: 129, barcode: "9780640012335"),
         // Not on this kiosk right now: these are out with readers or riding other trains.
         Book(id: "map", title: "How to Fold a Map", author: "Noor Haddad", genre: "Non-fiction", pages: 128,
              c1: Color(hex: 0xE9ECF1), c2: Color(hex: 0x2D5BA8), art: .lines,
              blurb: "Short essays about getting lost on purpose, from a writer who has never once folded a map the right way.",
              trips: [Trip(what: "Left on the 8:20 by Lily", when: "Yesterday")],
-             km: 302, barcode: "9780000000109"),
+             km: 302, barcode: "9780640013707"),
         Book(id: "fig", title: "The Fig Tree Club", author: "Ari Coleman", genre: "Kids", pages: 64,
              c1: Color(hex: 0x4E8A3E), c2: Color(hex: 0xFFE7A3), art: .circle,
              blurb: "Four friends, one giant fig tree in the park, and a summer holiday that nobody wants to end.",
              trips: [Trip(what: "Left on the 8:20 by Joel", when: "2 days ago")],
-             km: 88, barcode: "9780000000116"),
+             km: 88, barcode: "9780640015077"),
         Book(id: "orchard", title: "Orchard Hours", author: "Sofia Brennan", genre: "Fiction", pages: 240,
              c1: Color(hex: 0xB5523B), c2: Color(hex: 0xFBE3C9), art: .sun,
              blurb: "A woman goes back to her family orchard for one harvest and ends up staying for the whole year.",
              trips: [Trip(what: "Picked up by Alex", when: "Yesterday"),
                      Trip(what: "Left on this train by Mia", when: "Last week")],
-             km: 176, barcode: "9780000000123"),
+             km: 176, barcode: "9780640016449"),
         Book(id: "salt", title: "Salt and Static", author: "Priya Raman", genre: "Fiction", pages: 224,
              c1: Color(hex: 0x5B8DB8), c2: .white, art: .waves,
              blurb: "A radio host on the late shift starts getting calls from someone who says they are on a train that stopped running years ago.",
              trips: [Trip(what: "Bought and shared by Alex", when: "Today")],
-             km: 0, barcode: "9780000000130"),
+             km: 0, barcode: "9780640017811"),
     ]
 
     static func initialSlots() -> [Slot] {
@@ -279,7 +325,13 @@ enum Catalog {
     }
 
     /// Who has each book out right now, so a return can save a bookmark to the right account.
-    static let initialLoans = ["salt": "Alex", "orchard": "Alex", "map": "Priya", "fig": "Joel"]
+    static func initialLoans() -> [String: Loan] {
+        let now = Date()
+        return ["salt": Loan(name: "Alex", at: now.addingTimeInterval(-2 * 86_400)),
+                "orchard": Loan(name: "Alex", at: now.addingTimeInterval(-86_400)),
+                "map": Loan(name: "Priya", at: now.addingTimeInterval(-3 * 86_400)),
+                "fig": Loan(name: "Joel", at: now.addingTimeInterval(-2 * 86_400))]
+    }
 
     /// Saved pages, per reader account. Alex left off part way through Redfern last time.
     static let initialBookmarks = ["Alex": ["redfern": 142]]
@@ -293,7 +345,7 @@ enum Catalog {
     ]
     static let demoReturns: [(label: String, payload: String)] = [
         ("Salt and Static", "betweenstops://return?book=salt"),
-        ("Orchard Hours", "9780000000123"),
+        ("Orchard Hours", "9780640016449"),
         ("How to Fold a Map", "betweenstops://return?book=map"),
     ]
 }
